@@ -5,32 +5,27 @@ import os
 
 app = FastAPI()
 
-
 class Message(BaseModel):
     text: str
-
 
 @app.get("/")
 def root():
     return {"status": "JARVIS online"}
 
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-@app.post("/chat")
+@app.post("/")
 def chat(message: Message):
-    client = OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY")
-    )
+    api_key = os.environ.get("OPENAI_API_KEY")
+
+    if not api_key:
+        return {"error": "OPENAI_API_KEY не найден"}
+
+    client = OpenAI(api_key=api_key)
 
     response = client.responses.create(
         model="gpt-5",
         instructions=(
             "Ты JARVIS — персональный AI-ассистент Данилы. "
-            "Отвечай на русском языке естественно, уверенно и кратко."
+            "Отвечай на русском языке, естественно, уверенно и кратко."
         ),
         input=message.text
     )
