@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+node_modules/
+dist/
+.pytest_cache/
+data/nova.db*
+data/backups/
+data/logs/
+data/tts_cache/
+data/screenshots/

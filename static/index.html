@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NOVA — Neural Operational & Virtual Assistant</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo-area">
+        <div class="nova-badge">
+          <div class="pulse-ring"></div>
+          <span class="logo-icon">✦</span>
+        </div>
+        <div class="logo-text">
+          <h2>NOVA</h2>
+          <span class="logo-sub">v1.0.0 Desktop AI</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="chat">
+          <span class="icon">💬</span>
+          <span>Чат и Команды</span>
+        </button>
+        <button class="nav-item" data-tab="agents">
+          <span class="icon">🤖</span>
+          <span>Мульти-Агенты</span>
+        </button>
+        <button class="nav-item" data-tab="skills">
+          <span class="icon">⚡</span>
+          <span>Навыки (Skills)</span>
+        </button>
+        <button class="nav-item" data-tab="memory">
+          <span class="icon">🧠</span>
+          <span>База Памяти</span>
+        </button>
+        <button class="nav-item" data-tab="tools">
+          <span class="icon">🛠️</span>
+          <span>Инструменты ПК</span>
+        </button>
+        <button class="nav-item" data-tab="tasks">
+          <span class="icon">📋</span>
+          <span>Задачи и Таймеры</span>
+        </button>
+        <button class="nav-item" data-tab="research">
+          <span class="icon">🔍</span>
+          <span>Research OSINT</span>
+        </button>
+        <button class="nav-item" data-tab="diagnostics">
+          <span class="icon">🩺</span>
+          <span>Диагностика</span>
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <span class="icon">⚙️</span>
+          <span>Настройки</span>
+        </button>
+        <button class="nav-item" data-tab="logs">
+          <span class="icon">📜</span>
+          <span>Журнал / Логи</span>
+        </button>
+      </nav>
+
+      <div class="system-status-widget">
+        <div class="status-indicator online"></div>
+        <div class="status-details">
+          <span class="status-title" id="sidebarStatus">Система готова</span>
+          <span class="status-sub" id="sidebarMode">Local Offline</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 id="pageTitle">Чат и Командная строка</h1>
+        </div>
+        <div class="topbar-right">
+          <!-- Voice Wake Word Badge -->
+          <div class="voice-badge" id="voiceStatusBadge" title="Голосовая активация: скажите 'Нова'">
+            <span class="mic-dot"></span>
+            <span id="voiceStatusText">Wake Word: «Нова»</span>
+          </div>
+
+          <!-- Quick Actions -->
+          <button class="action-btn" id="btnQuickScreenshot" title="Снимок экрана">📸 Скриншот</button>
+          <button class="action-btn" id="btnQuickVolume" title="Отключить/Включить звук">🔇 Звук</button>
+          <button class="action-btn theme-toggle" id="btnThemeToggle" title="Сменить тему">🌓</button>
+        </div>
+      </header>
+
+      <!-- TAB 1: Chat and Command Center -->
+      <section class="tab-pane active" id="pane-chat">
+        <div class="chat-wrapper">
+          <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+              <div class="avatar">✦</div>
+              <div class="msg-body">
+                <div class="msg-header">NOVA Assistant</div>
+                <div class="msg-text">
+                  Здравствуйте! Я <strong>NOVA</strong> — ваш персональный автономный AI-ассистент. 
+                  Я готова выполнять задачи на компьютере, искать файлы, управлять громкостью и приложениями, или отвечать на вопросы. 
+                  Скажите <em>«Нова»</em> или напишите команду ниже.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Agent Step Visualizer (shown during multi-step execution) -->
+          <div class="agent-visualizer" id="agentVisualizer" style="display: none;">
+            <div class="viz-header">
+              <span class="viz-title">⚡ Выполнение цепочки действий агента</span>
+              <span class="viz-status" id="vizStatus">Планирование...</span>
+            </div>
+            <div class="viz-steps" id="vizSteps"></div>
+          </div>
+
+          <div class="chat-input-container">
+            <div class="input-tools">
+              <button class="mic-btn" id="btnMic" title="Включить микрофон">
+                <span class="mic-icon">🎙️</span>
+              </button>
+              <textarea 
+                id="chatInput" 
+                placeholder="Напишите команду или вопрос (например: 'состояние пк', 'открой блокнот', 'посчитай 125 * 48')..."
+                rows="1"
+              ></textarea>
+              <button class="send-btn" id="btnSend">
+                <span>Отправить</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Multi-Agents -->
+      <section class="tab-pane" id="pane-agents">
+        <div class="pane-header">
+          <h2>Специализированные автономные агенты</h2>
+          <button class="btn-primary" id="btnNewAgent">+ Создать агента</button>
+        </div>
+        <p class="pane-desc">Автономные агенты самостоятельно планируют шаги, запускают локальные инструменты, верифицируют результат и отменяют ошибочные действия.</p>
+        <div class="agents-grid" id="agentsGrid"></div>
+      </section>
+
+      <!-- TAB 3: Skills (Visual Builder) -->
+      <section class="tab-pane" id="pane-skills">
+        <div class="pane-header">
+          <h2>Конструктор навыков (Visual Skill Builder)</h2>
+          <button class="btn-primary" id="btnNewSkill">+ Новый навык</button>
+        </div>
+        <p class="pane-desc">Создавайте и автоматизируйте сценарии без программирования. Навыки срабатывают по голосовой фразе или горячим клавишам.</p>
+        <div class="skills-list" id="skillsList"></div>
+      </section>
+
+      <!-- TAB 4: Memory Database -->
+      <section class="tab-pane" id="pane-memory">
+        <div class="pane-header">
+          <h2>База знаний и память NOVA</h2>
+          <div class="header-actions">
+            <button class="btn-secondary" id="btnExportMemory">📥 Экспорт JSON</button>
+            <button class="btn-primary" id="btnAddMemory">+ Добавить факт</button>
+          </div>
+        </div>
+        <div class="memory-filter-bar">
+          <input type="text" id="memorySearchInput" placeholder="Поиск по памяти..." class="input-search" />
+          <select id="memoryCategoryFilter" class="select-filter">
+            <option value="">Все категории</option>
+            <option value="long_term">Долговременная</option>
+            <option value="preference">Предпочтения</option>
+            <option value="episodic">События и заметки</option>
+            <option value="semantic">Знания</option>
+          </select>
+        </div>
+        <div class="memory-grid" id="memoryGrid"></div>
+      </section>
+
+      <!-- TAB 5: PC Tools -->
+      <section class="tab-pane" id="pane-tools">
+        <div class="pane-header">
+          <h2>Локальные инструменты ПК</h2>
+        </div>
+        <div class="tools-layout">
+          <!-- System Metrics Card -->
+          <div class="card tool-card">
+            <h3>📊 Системный монитор</h3>
+            <div class="metrics-grid" id="systemMetricsGrid">
+              <div class="metric-box">
+                <span class="m-label">Загрузка CPU</span>
+                <span class="m-val" id="metricCpu">--%</span>
+              </div>
+              <div class="metric-box">
+                <span class="m-label">Память RAM</span>
+                <span class="m-val" id="metricRam">--%</span>
+              </div>
+              <div class="metric-box">
+                <span class="m-label">Основной диск</span>
+                <span class="m-val" id="metricDisk">--%</span>
+              </div>
+            </div>
+            <button class="btn-secondary mt-2" id="btnRefreshMetrics">Обновить метрики</button>
+          </div>
+
+          <!-- File Explorer Search Card -->
+          <div class="card tool-card">
+            <h3>📁 Поиск и работа с файлами</h3>
+            <div class="file-search-row">
+              <input type="text" id="toolFileQuery" placeholder="Имя файла или маска..." class="input-search" />
+              <button class="btn-primary" id="btnToolSearchFiles">Найти</button>
+            </div>
+            <div class="file-results" id="toolFileResults"></div>
+          </div>
+
+          <!-- Process Manager Card -->
+          <div class="card tool-card">
+            <h3>⚙️ Активные процессы</h3>
+            <div class="process-list" id="toolProcessList"></div>
+            <button class="btn-secondary mt-2" id="btnRefreshProcesses">Обновить список</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: Tasks -->
+      <section class="tab-pane" id="pane-tasks">
+        <div class="pane-header">
+          <h2>Менеджер задач и таймеров</h2>
+          <button class="btn-primary" id="btnNewTask">+ Добавить задачу</button>
+        </div>
+        <div class="tasks-list" id="tasksList"></div>
+      </section>
+
+      <!-- TAB 7: Research Mode -->
+      <section class="tab-pane" id="pane-research">
+        <div class="pane-header">
+          <h2>Creator-Only Research & OSINT Режим</h2>
+        </div>
+        <p class="pane-desc">Легальный сбор и систематизация открытых публичных данных из открытых источников и реестров.</p>
+        <div class="research-input-box">
+          <div class="row gap-2">
+            <input type="text" id="researchQuery" placeholder="ФИО персоны, название компании или домен..." class="input-search flex-1" />
+            <select id="researchType" class="select-filter">
+              <option value="person">Персона / Профиль</option>
+              <option value="company">Компания / Реестр</option>
+              <option value="domain">Домен / DNS</option>
+              <option value="general">Общий открытый поиск</option>
+            </select>
+            <button class="btn-primary" id="btnStartResearch">Исследовать</button>
+          </div>
+        </div>
+        <div class="research-results" id="researchResults"></div>
+      </section>
+
+      <!-- TAB 8: Diagnostics -->
+      <section class="tab-pane" id="pane-diagnostics">
+        <div class="pane-header">
+          <h2>Самодиагностика системы NOVA</h2>
+          <button class="btn-primary" id="btnRunDiagnostics">Запустить полную проверку</button>
+        </div>
+        <div class="diag-summary" id="diagSummary">
+          <span class="diag-badge" id="diagStatusBadge">Нажмите кнопку для проверки</span>
+        </div>
+        <div class="diag-checks-list" id="diagChecksList"></div>
+      </section>
+
+      <!-- TAB 9: Settings -->
+      <section class="tab-pane" id="pane-settings">
+        <div class="pane-header">
+          <h2>Настройки ассистента</h2>
+          <button class="btn-primary" id="btnSaveSettings">Сохранить настройки</button>
+        </div>
+        <div class="settings-form" id="settingsForm">
+          <div class="settings-section">
+            <h3>🤖 Искусственный Интеллект (AI Provider)</h3>
+            <div class="form-group">
+              <label>Провайдер AI:</label>
+              <select id="cfgAiProvider" class="form-control">
+                <option value="local">Локальный офлайн (Rule & Intent Engine)</option>
+                <option value="openai">OpenAI (GPT-4o / gpt-4o-mini)</option>
+                <option value="ollama">Ollama (Локальная LLM модель)</option>
+                <option value="compatible">OpenAI-совместимый API</option>
+              </select>
+            </div>
+            <div class="form-group" id="cfgApiKeyGroup">
+              <label>API Ключ:</label>
+              <input type="password" id="cfgApiKey" placeholder="sk-..." class="form-control" />
+            </div>
+            <div class="form-group">
+              <label>Модель:</label>
+              <input type="text" id="cfgAiModel" value="gpt-4o-mini" class="form-control" />
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>🎙️ Голос и Wake Word</h3>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgVoiceEnabled" checked /> Включить голосовой интерфейс</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgWakeWordEnabled" checked /> Активация по фразе «Нова»</label>
+            </div>
+            <div class="form-group">
+              <label>Голос синтеза (TTS):</label>
+              <select id="cfgVoiceSelect" class="form-control">
+                <option value="ru-RU-DmitryNeural">Дмитрий (Естественный, Мужской)</option>
+                <option value="ru-RU-SvetlanaNeural">Светлана (Естественный, Женский)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>🛡️ Безопасность и Разрешения</h3>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgAllowFileRead" checked /> Чтение файлов</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgAllowFileWrite" checked /> Запись файлов</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgAllowFileDelete" /> Удаление файлов</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgAllowAppLaunch" checked /> Запуск приложений</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgAllowSystemControl" checked /> Управление звуком и экраном</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="cfgRequireConfirm" checked /> Требовать подтверждение для опасных действий</label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 10: Audit Logs -->
+      <section class="tab-pane" id="pane-logs">
+        <div class="pane-header">
+          <h2>Журнал безопасности и аудита</h2>
+          <button class="btn-secondary" id="btnRefreshLogs">Обновить</button>
+        </div>
+        <div class="logs-container" id="logsContainer"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

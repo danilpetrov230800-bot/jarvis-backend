@@ -1,0 +1,53 @@
+{
+  "name": "nova-desktop-assistant",
+  "version": "1.0.0",
+  "description": "NOVA — Neural Operational & Virtual Assistant for Windows",
+  "main": "main.js",
+  "author": "NOVA Autonomous Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.nova.assistant",
+    "productName": "NOVA",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "static/favicon.svg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NOVA",
+      "artifactName": "NOVA-Setup.${ext}"
+    },
+    "files": [
+      "main.js",
+      "server.py",
+      "nova/**/*",
+      "static/**/*",
+      "requirements.txt"
+    ]
+  },
+  "dependencies": {
+    "electron": "^31.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  }
+}
