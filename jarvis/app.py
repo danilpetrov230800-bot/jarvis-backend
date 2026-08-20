@@ -394,5 +394,10 @@ def index() -> FileResponse:
     return FileResponse(STATIC / "index.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    return FileResponse(STATIC / "favicon.svg", media_type="image/svg+xml")
+
+
 if STATIC.exists():
     app.mount("/static", StaticFiles(directory=STATIC), name="static")

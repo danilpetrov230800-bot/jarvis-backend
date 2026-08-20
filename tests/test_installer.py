@@ -74,6 +74,10 @@ def test_home_has_nova_ui(client):
     assert "pcDock" in html
     assert "stopBtn" in html
     assert "chips" in html
+    assert "workspacePanel" in html
+    assert "data-section=\"memory\"" in html
+    assert "favicon.svg" in html
+    assert client.get("/favicon.ico").status_code == 200
 
 
 def test_run_py_has_no_browser_flag():
