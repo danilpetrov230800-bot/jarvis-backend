@@ -9,15 +9,15 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from jarvis.brain import respond
 from jarvis.config import load_settings, merge_settings, public_settings, save_settings
-from jarvis.llm import LLMError, chat_once
 from jarvis.memory import ConversationMemory
 from jarvis.voice import list_russian_voices, synthesize
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
 
-app = FastAPI(title="NOVA", version="1.1.0")
+app = FastAPI(title="NOVA", version="1.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -60,7 +60,7 @@ def api_status() -> dict[str, Any]:
         "status": "NOVA online",
         "assistant": settings.assistant_name,
         "user": settings.user_name,
-        "ready": bool(settings.api_key) or settings.provider == "ollama",
+        "ready": True,
     }
 
 
@@ -119,10 +119,7 @@ async def speak(payload: SpeakIn) -> Response:
 
 async def _chat(text: str) -> dict[str, Any]:
     settings = load_settings()
-    try:
-        result = await chat_once(settings, memory.history(), text.strip())
-    except LLMError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    result = await respond(settings, memory.history(), text.strip())
     memory.add("user", text.strip())
     memory.add("assistant", result["reply"])
     return result

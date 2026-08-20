@@ -266,60 +266,15 @@ function inferProvider(key) {
   return "auto";
 }
 
-function isReady(info) {
-  return Boolean(info.has_api_key || info.resolved_provider === "ollama");
-}
-
-function showSetup(visible) {
-  const el = document.getElementById("setup");
-  el.hidden = !visible;
-  el.classList.toggle("hidden", !visible);
-}
-
-document.getElementById("setupSave").addEventListener("click", async () => {
-  const key = document.getElementById("setupKey").value.trim();
-  const name = document.getElementById("setupName").value.trim() || "Данила";
-  const err = document.getElementById("setupError");
-  if (!key) {
-    err.hidden = false;
-    err.textContent = "Вставьте ключ — без него модель не ответит.";
-    return;
-  }
-  const res = await fetch("/api/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: key,
-      user_name: name,
-      provider: inferProvider(key),
-      assistant_name: "Nova",
-    }),
-  });
-  if (!res.ok) {
-    err.hidden = false;
-    err.textContent = "Не удалось сохранить ключ.";
-    return;
-  }
-  settings = await (await fetch("/api/settings")).json();
-  showSetup(false);
-  addMessage("assistant", `Я Nova. Приятно работать с вами, ${name}. Можно говорить или писать.`);
-  setState("idle", "онлайн");
-});
-
 async function boot() {
   startStars();
   setupMic();
   try {
     settings = await (await fetch("/api/settings")).json();
     document.getElementById("assistantName").textContent = settings.assistant_name || "NOVA";
-    if (!isReady(settings)) {
-      showSetup(true);
-      setState("idle", "нужен ключ");
-      return;
-    }
     addMessage(
       "assistant",
-      `Я ${settings.assistant_name}. Можно говорить или писать — если нужно, сама найду ответ в сети.`,
+      "Я Nova. Ключ не обязателен. Скажите: «открой YouTube», «запусти калькулятор», «который час» или спросите что угодно — поищу в сети.",
     );
     setState("idle", "онлайн");
   } catch {

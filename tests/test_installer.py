@@ -13,6 +13,7 @@ def test_nova_bat_is_ascii_and_calls_bootstrap():
     text = data.decode("ascii")
     assert "installer\\bootstrap.ps1" in text
     assert "ExecutionPolicy Bypass" in text
+    assert "pause" in text
     for line in text.splitlines():
         stripped = line.strip().lower()
         if stripped.startswith("echo"):
@@ -33,7 +34,7 @@ def test_bootstrap_downloads_embeddable_python():
     assert "embed-amd64.zip" in text
     assert "get-pip.py" in text
     assert "CreateShortcut" in text
-    assert "NOVA.bat" in text
+    assert "Keep this window open" in text
     assert "Unblock-File" in text
 
 
@@ -52,8 +53,7 @@ def test_package_contains_runtime_files_not_tests(tmp_path):
     assert zpath.stat().st_size > 1000
 
 
-def test_home_has_first_run_wizard(client):
+def test_home_has_nova_ui(client):
     html = client.get("/").text
     assert "NOVA" in html
-    assert "setupKey" in html
-    assert "console.groq.com/keys" in html
+    assert "hud" in html

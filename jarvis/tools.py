@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from jarvis.desktop import open_app, open_url, save_note, take_screenshot
 from jarvis.search import browse_url, format_search_results, search_web, serialize_sources
 
 ToolHandler = Callable[..., Awaitable[str]]
@@ -75,6 +76,50 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "open_url",
+            "description": "Открыть сайт в браузере пользователя.",
+            "parameters": {
+                "type": "object",
+                "properties": {"url": {"type": "string"}},
+                "required": ["url"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "open_app",
+            "description": "Запустить программу на ПК: notepad, calc, explorer, chrome, steam.",
+            "parameters": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "take_screenshot",
+            "description": "Сделать снимок экрана.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_note",
+            "description": "Сохранить заметку.",
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+        },
+    },
 ]
 
 
@@ -136,11 +181,42 @@ async def tool_get_weather(ctx: ToolContext, location: str) -> str:
     )
 
 
+async def tool_open_url(ctx: ToolContext, url: str) -> str:
+    opened = open_url(url)
+    ctx.log.append(f"open_url:{opened}")
+    ctx.sources.append({"title": opened, "url": opened})
+    return f"Открыто: {opened}"
+
+
+async def tool_open_app(ctx: ToolContext, name: str) -> str:
+    launched = open_app(name)
+    ctx.log.append(f"open_app:{name}")
+    if launched:
+        return f"Запущено: {launched}"
+    return f"Не нашла программу «{name}»."
+
+
+async def tool_take_screenshot(ctx: ToolContext) -> str:
+    path = take_screenshot()
+    ctx.log.append("screenshot")
+    return f"Скриншот: {path}"
+
+
+async def tool_save_note(ctx: ToolContext, text: str) -> str:
+    path = save_note(text)
+    ctx.log.append("note")
+    return f"Заметка сохранена: {path}"
+
+
 HANDLERS: dict[str, Any] = {
     "web_search": tool_web_search,
     "browse_url": tool_browse_url,
     "get_datetime": tool_get_datetime,
     "get_weather": tool_get_weather,
+    "open_url": tool_open_url,
+    "open_app": tool_open_app,
+    "take_screenshot": tool_take_screenshot,
+    "save_note": tool_save_note,
 }
 
 

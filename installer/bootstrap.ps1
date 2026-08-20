@@ -94,7 +94,15 @@ function Start-Nova {
     }
     Write-Step "Starting NOVA..."
     Set-Location $Root
+    New-Item -ItemType Directory -Force -Path (Join-Path $Root "data") | Out-Null
+    Write-Host "NOVA UI: http://127.0.0.1:8080"
+    Write-Host "Keep this window open."
     & $Python (Join-Path $Root "run.py")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Python exited with code $LASTEXITCODE"
+        Write-Host "Log: $(Join-Path $Root 'data\nova.log')"
+        exit $LASTEXITCODE
+    }
 }
 
 Unblock-Tree $Root
