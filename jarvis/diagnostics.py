@@ -32,7 +32,10 @@ def run_diagnostics() -> dict[str, Any]:
     checks.append(_result("voice_stt", "PASS" if sys.platform == "win32" else "WARNING", "WebView2 Speech Recognition" if sys.platform == "win32" else "Проверка микрофона доступна в Windows"))
     checks.append(_result("storage", "PASS" if DATA_DIR.exists() and DATA_DIR.is_dir() else "WARNING", str(DATA_DIR)))
     checks.append(_result("assets", "PASS" if (ROOT / "static" / "index.html").is_file() else "FAIL", str(ROOT / "static")))
-    free = shutil.disk_usage(DATA_DIR).free if DATA_DIR.exists() else shutil.disk_usage(DATA_DIR.parent).free
+    disk_probe = DATA_DIR
+    while not disk_probe.exists() and disk_probe != disk_probe.parent:
+        disk_probe = disk_probe.parent
+    free = shutil.disk_usage(disk_probe).free
     checks.append(_result("disk", "PASS" if free > 500 * 1024**2 else "WARNING", f"{free / 1024**3:.1f} GB свободно"))
     checks.append(_result("permissions", "PASS", f"{sum(bool(p['enabled']) for p in list_permissions())} разрешений включено"))
     try:
