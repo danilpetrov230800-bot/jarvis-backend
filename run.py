@@ -17,7 +17,7 @@ def main() -> None:
     from jarvis.config import load_settings
     from jarvis.app import app
 
-    parser = argparse.ArgumentParser(description="JARVIS — персональный ИИ-помощник")
+    parser = argparse.ArgumentParser(description="NOVA — персональный ИИ-помощник")
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--no-browser", action="store_true")
@@ -28,7 +28,7 @@ def main() -> None:
     requested = args.port or settings.port
     port = find_free_port(host, requested)
     url = f"http://{host}:{port}"
-    print(f"JARVIS: {url}", flush=True)
+    print(f"NOVA: {url}", flush=True)
     if settings.open_browser and not args.no_browser:
         try:
             webbrowser.open(url)

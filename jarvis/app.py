@@ -17,7 +17,7 @@ from jarvis.voice import list_russian_voices, synthesize
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
 
-app = FastAPI(title="JARVIS", version="1.0.0")
+app = FastAPI(title="NOVA", version="1.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -57,7 +57,7 @@ class SpeakIn(BaseModel):
 def api_status() -> dict[str, Any]:
     settings = load_settings()
     return {
-        "status": "JARVIS online",
+        "status": "NOVA online",
         "assistant": settings.assistant_name,
         "user": settings.user_name,
         "ready": bool(settings.api_key) or settings.provider == "ollama",

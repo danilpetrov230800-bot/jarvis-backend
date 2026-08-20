@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 INCLUDE_FILES = (
+    "NOVA.bat",
     "JARVIS.bat",
     "run.py",
     "requirements.txt",
@@ -63,21 +64,21 @@ def write_zip(destination: Path) -> Path:
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in iter_package_files():
-            archive.write(path, arcname=Path("JARVIS") / path.relative_to(ROOT))
+            archive.write(path, arcname=Path("NOVA") / path.relative_to(ROOT))
     return destination
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Собрать ZIP JARVIS для ПК")
+    parser = argparse.ArgumentParser(description="Pack NOVA ZIP for PC")
     parser.add_argument(
         "-o",
         "--output",
-        default=str(ROOT / "dist" / "JARVIS-windows.zip"),
-        help="Путь к zip",
+        default=str(ROOT / "dist" / "NOVA-windows.zip"),
+        help="Path to zip",
     )
     args = parser.parse_args()
     out = write_zip(Path(args.output))
-    print(f"Готово: {out} ({out.stat().st_size} байт)")
+    print(f"Ready: {out} ({out.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":

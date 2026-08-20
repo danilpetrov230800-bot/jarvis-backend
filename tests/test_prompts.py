@@ -2,7 +2,7 @@ from jarvis.prompts import search_needed, system_prompt
 
 
 def test_system_prompt_is_russian_and_literate():
-    text = system_prompt("Данила", "JARVIS")
+    text = system_prompt("Данила", "Nova")
     assert "грамотным литературным русским" in text
     assert "web_search" in text
     assert "Данила" in text

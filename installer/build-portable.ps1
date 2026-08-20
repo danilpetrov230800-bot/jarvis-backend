@@ -2,13 +2,14 @@
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Dist = Join-Path $Root "dist"
-$Stage = Join-Path $Dist "JARVIS"
-$Zip = Join-Path $Dist "JARVIS-windows.zip"
+$Stage = Join-Path $Dist "NOVA"
+$Zip = Join-Path $Dist "NOVA-windows.zip"
 
 if (Test-Path $Dist) { Remove-Item $Dist -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
 
 $copy = @(
+    "NOVA.bat",
     "JARVIS.bat",
     "run.py",
     "requirements.txt",

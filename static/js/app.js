@@ -16,14 +16,53 @@ let speaking = false;
 let settings = {};
 let audioQueue = Promise.resolve();
 
+function startStars() {
+  const canvas = document.getElementById("stars");
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext("2d");
+  const stars = [];
+  const resize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  };
+  resize();
+  window.addEventListener("resize", resize);
+  for (let i = 0; i < 140; i += 1) {
+    stars.push({
+      x: Math.random(),
+      y: Math.random(),
+      z: Math.random() * 1.4 + 0.2,
+      p: Math.random() * Math.PI * 2,
+    });
+  }
+  const tick = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const star of stars) {
+      star.p += 0.015 * star.z;
+      const alpha = 0.15 + Math.abs(Math.sin(star.p)) * 0.75;
+      ctx.fillStyle = `rgba(243, 237, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(star.x * canvas.width, star.y * canvas.height, star.z, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+
 function setState(state, detail = "") {
   hud.className = `hud ${state}`;
-  hudState.textContent = state.toUpperCase();
+  hudState.textContent = {
+    idle: "NOVA",
+    listening: "LISTEN",
+    thinking: "THINK",
+    speaking: "SPEAK",
+  }[state] || "NOVA";
   statusLine.textContent = detail || {
-    idle: "система в режиме ожидания",
-    listening: "слушаю вас, сэр",
-    thinking: "анализ запроса",
-    speaking: "голосовой канал",
+    idle: "ожидание",
+    listening: "слушаю вас",
+    thinking: "думаю",
+    speaking: "говорю",
   }[state] || detail;
 }
 
@@ -32,7 +71,7 @@ function addMessage(role, text, sources = []) {
   wrap.className = `msg ${role}`;
   const who = document.createElement("span");
   who.className = "who";
-  who.textContent = role === "user" ? (settings.user_name || "Вы") : (settings.assistant_name || "JARVIS");
+  who.textContent = role === "user" ? (settings.user_name || "Вы") : (settings.assistant_name || "NOVA");
   wrap.appendChild(who);
   wrap.appendChild(document.createTextNode(text));
   if (sources.length) {
@@ -119,7 +158,7 @@ formEl.addEventListener("submit", (e) => {
 function maybeWake(transcript) {
   const t = transcript.trim();
   const lower = t.toLowerCase();
-  const woke = /^(джарвис|jarvis)[,.\s:-]*/i.exec(lower);
+  const woke = /^(нова|nova|джарвис|jarvis)[,.\s:-]*/i.exec(lower);
   if (woke) return t.slice(woke[0].length).trim() || t;
   return t;
 }
@@ -155,7 +194,7 @@ function setupMic() {
 
 micBtn.addEventListener("click", () => {
   if (!recognition) {
-    addMessage("assistant", "Сэр, голосовой ввод доступен в браузерах Chrome и Edge.");
+    addMessage("assistant", "Голосовой ввод доступен в Chrome и Edge.");
     return;
   }
   listening = !listening;
@@ -177,7 +216,7 @@ document.getElementById("closeSettings").addEventListener("click", () => setting
 document.getElementById("resetBtn").addEventListener("click", async () => {
   await fetch("/api/reset", { method: "POST" });
   logEl.innerHTML = "";
-  addMessage("assistant", "Память диалога очищена. Слушаю вас, сэр.");
+  addMessage("assistant", "Память диалога очищена. Слушаю вас.");
 });
 
 document.getElementById("saveSettings").addEventListener("click", async (e) => {
@@ -190,7 +229,7 @@ document.getElementById("saveSettings").addEventListener("click", async (e) => {
     body: JSON.stringify(data),
   });
   settings = await (await fetch("/api/settings")).json();
-  document.getElementById("assistantName").textContent = settings.assistant_name || "JARVIS";
+  document.getElementById("assistantName").textContent = settings.assistant_name || "NOVA";
   settingsDlg.close();
 });
 
@@ -201,18 +240,22 @@ async function loadSettingsIntoForm() {
   form.model.value = settings.model || "";
   form.base_url.value = settings.base_url || "";
   form.user_name.value = settings.user_name || "";
-  const voices = await (await fetch("/api/voices")).json();
-  const select = form.tts_voice;
-  select.innerHTML = "";
-  for (const voice of voices.voices || []) {
-    const opt = document.createElement("option");
-    opt.value = voice.id;
-    opt.textContent = `${voice.name} (${voice.gender})`;
-    if (voice.id === settings.tts_voice) opt.selected = true;
-    select.appendChild(opt);
-  }
-  if (!select.options.length) {
-    select.innerHTML = '<option value="ru-RU-DmitryNeural">Dmitry</option>';
+  try {
+    const voices = await (await fetch("/api/voices")).json();
+    const select = form.tts_voice;
+    select.innerHTML = "";
+    for (const voice of voices.voices || []) {
+      const opt = document.createElement("option");
+      opt.value = voice.id;
+      opt.textContent = `${voice.name} (${voice.gender})`;
+      if (voice.id === settings.tts_voice) opt.selected = true;
+      select.appendChild(opt);
+    }
+    if (!select.options.length) {
+      select.innerHTML = '<option value="ru-RU-DmitryNeural">Dmitry</option>';
+    }
+  } catch {
+    form.tts_voice.innerHTML = '<option value="ru-RU-DmitryNeural">Dmitry</option>';
   }
 }
 
@@ -245,7 +288,12 @@ document.getElementById("setupSave").addEventListener("click", async () => {
   const res = await fetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: key, user_name: name, provider: inferProvider(key) }),
+    body: JSON.stringify({
+      api_key: key,
+      user_name: name,
+      provider: inferProvider(key),
+      assistant_name: "Nova",
+    }),
   });
   if (!res.ok) {
     err.hidden = false;
@@ -254,27 +302,28 @@ document.getElementById("setupSave").addEventListener("click", async () => {
   }
   settings = await (await fetch("/api/settings")).json();
   showSetup(false);
-  addMessage("assistant", `Системы в норме. Я ${settings.assistant_name}, ${name}. Можно говорить или писать.`);
+  addMessage("assistant", `Я Nova. Приятно работать с вами, ${name}. Можно говорить или писать.`);
   setState("idle", "онлайн");
 });
 
 async function boot() {
+  startStars();
   setupMic();
   try {
     settings = await (await fetch("/api/settings")).json();
-    document.getElementById("assistantName").textContent = settings.assistant_name || "JARVIS";
+    document.getElementById("assistantName").textContent = settings.assistant_name || "NOVA";
     if (!isReady(settings)) {
       showSetup(true);
-      setState("idle", "нужен API-ключ");
+      setState("idle", "нужен ключ");
       return;
     }
     addMessage(
       "assistant",
-      `Системы в норме. Я ${settings.assistant_name}, сэр. Можно говорить или писать — при необходимости я сам полезу в сеть.`,
+      `Я ${settings.assistant_name}. Можно говорить или писать — если нужно, сама найду ответ в сети.`,
     );
     setState("idle", "онлайн");
   } catch {
-    addMessage("assistant", "Не удалось связаться с локальным ядром JARVIS.");
+    addMessage("assistant", "Не удалось связаться с ядром NOVA.");
   }
 }
 

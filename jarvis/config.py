@@ -18,7 +18,7 @@ class Settings(BaseModel):
     base_url: str = ""
     model: str = ""
     user_name: str = "Данила"
-    assistant_name: str = "JARVIS"
+    assistant_name: str = "Nova"
     language: str = "ru"
     tts_voice: str = "ru-RU-DmitryNeural"
     tts_rate: str = "+8%"
@@ -52,16 +52,17 @@ def load_settings() -> Settings:
     file_data = {k: v for k, v in _read_json(SETTINGS_PATH).items() if v not in ("", None)}
     settings = Settings.model_validate(file_data)
 
-    settings.user_name = os.getenv("JARVIS_USER_NAME", settings.user_name)
-    settings.assistant_name = os.getenv("JARVIS_ASSISTANT_NAME", settings.assistant_name)
-    settings.tts_voice = os.getenv("JARVIS_TTS_VOICE", settings.tts_voice)
-    settings.host = os.getenv("JARVIS_HOST", settings.host)
-    settings.port = int(os.getenv("JARVIS_PORT", settings.port))
-    settings.provider = os.getenv("JARVIS_PROVIDER", settings.provider).lower()
-    settings.model = os.getenv("JARVIS_MODEL", os.getenv("OPENAI_MODEL", settings.model))
-    settings.base_url = os.getenv("JARVIS_BASE_URL", os.getenv("OPENAI_BASE_URL", settings.base_url))
+    settings.user_name = os.getenv("NOVA_USER_NAME", os.getenv("JARVIS_USER_NAME", settings.user_name))
+    settings.assistant_name = os.getenv("NOVA_ASSISTANT_NAME", os.getenv("JARVIS_ASSISTANT_NAME", settings.assistant_name))
+    settings.tts_voice = os.getenv("NOVA_TTS_VOICE", os.getenv("JARVIS_TTS_VOICE", settings.tts_voice))
+    settings.host = os.getenv("NOVA_HOST", os.getenv("JARVIS_HOST", settings.host))
+    settings.port = int(os.getenv("NOVA_PORT", os.getenv("JARVIS_PORT", settings.port)))
+    settings.provider = os.getenv("NOVA_PROVIDER", os.getenv("JARVIS_PROVIDER", settings.provider)).lower()
+    settings.model = os.getenv("NOVA_MODEL", os.getenv("JARVIS_MODEL", os.getenv("OPENAI_MODEL", settings.model)))
+    settings.base_url = os.getenv("NOVA_BASE_URL", os.getenv("JARVIS_BASE_URL", os.getenv("OPENAI_BASE_URL", settings.base_url)))
 
     env_key = _first_env(
+        "NOVA_API_KEY",
         "JARVIS_API_KEY",
         "OPENROUTER_API_KEY",
         "GROQ_API_KEY",

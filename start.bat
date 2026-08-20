@@ -1,3 +1,4 @@
 @echo off
+setlocal EnableExtensions
 cd /d "%~dp0"
-call "%~dp0JARVIS.bat"
+call "%~dp0NOVA.bat"

@@ -11,11 +11,11 @@ def test_health(client):
 def test_status_and_home(client):
     status = client.get("/api/status")
     assert status.status_code == 200
-    assert "JARVIS" in status.json()["status"]
+    assert "NOVA" in status.json()["status"]
     home = client.get("/")
     assert home.status_code == 200
     assert "text/html" in home.headers["content-type"]
-    assert "JARVIS" in home.text
+    assert "NOVA" in home.text
 
 
 def test_legacy_chat_without_key(client, monkeypatch):

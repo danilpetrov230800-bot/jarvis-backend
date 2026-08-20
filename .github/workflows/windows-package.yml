@@ -27,9 +27,9 @@ jobs:
         shell: powershell
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File installer\build-portable.ps1
-      - name: Upload JARVIS-windows.zip
+      - name: Upload NOVA-windows.zip
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-windows
-          path: dist/JARVIS-windows.zip
+          name: NOVA-windows
+          path: dist/NOVA-windows.zip
           if-no-files-found: error

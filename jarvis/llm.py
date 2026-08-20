@@ -21,13 +21,13 @@ def build_client(settings: Settings) -> AsyncOpenAI:
     api_key = settings.api_key or "ollama"
     if provider != "ollama" and not settings.api_key:
         raise LLMError(
-            "Не задан API-ключ. Откройте настройки JARVIS и укажите ключ OpenRouter, Groq или OpenAI."
+            "Не задан API-ключ. Откройте настройки NOVA и укажите ключ OpenRouter, Groq или OpenAI."
         )
     default_headers = {}
     if provider == "openrouter":
         default_headers = {
             "HTTP-Referer": "http://127.0.0.1:8080",
-            "X-Title": "JARVIS",
+            "X-Title": "NOVA",
         }
     return AsyncOpenAI(
         api_key=api_key,
@@ -151,7 +151,7 @@ async def chat_once(
         reply = _message_text(response.choices[0].message).strip()
 
     if not reply:
-        reply = "Сэр, модель вернула пустой ответ. Проверьте ключ и выбранную модель в настройках."
+        reply = "Модель вернула пустой ответ. Проверьте ключ и выбранную модель в настройках."
 
     unique_sources = []
     seen = set()
