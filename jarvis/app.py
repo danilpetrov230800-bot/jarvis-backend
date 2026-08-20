@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -35,7 +36,15 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="NOVA", version="2.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="NOVA",
+    version="2.0.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"])
 
 
 @app.exception_handler(ValueError)

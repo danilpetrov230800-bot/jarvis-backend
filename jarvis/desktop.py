@@ -162,7 +162,7 @@ def open_app(name: str) -> str | None:
     matched = discovered.get(key)
     if not matched:
         matched = next((path for title, path in discovered.items() if key in title or title in key), None)
-    candidates = APPS.get(key, [matched or name])
+    candidates = APPS.get(key, [matched] if matched else [])
     for item in candidates:
         if not item:
             continue
@@ -200,8 +200,9 @@ def take_screenshot() -> Path:
             f"$img.Save('{path.as_posix()}')"
         )
         subprocess.run(["powershell", "-NoProfile", "-Command", script], check=False)
-    if not path.exists():
-        path.write_bytes(b"")
+    if not path.exists() or path.stat().st_size == 0:
+        path.unlink(missing_ok=True)
+        raise RuntimeError("Не удалось создать снимок экрана")
     return path
 
 

@@ -23,6 +23,7 @@ from jarvis.net import find_free_port
 
 load_dotenv(ROOT / ".env")
 LOG = DATA_DIR / "nova.log"
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
 def _setup_logging() -> None:
@@ -56,6 +57,13 @@ def _open_when_ready(url: str) -> None:
         print(f"Open this URL in Chrome or Edge: {url}", flush=True)
 
 
+def safe_host(requested: str) -> str:
+    if requested.strip().lower() not in LOOPBACK_HOSTS:
+        logging.warning("Rejected non-loopback bind address")
+        return "127.0.0.1"
+    return requested
+
+
 def main() -> None:
     _setup_logging()
     from jarvis.config import load_settings
@@ -69,7 +77,7 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = load_settings()
-    host = args.host or settings.host
+    host = safe_host(args.host or settings.host)
     requested = args.port or settings.port
     port = find_free_port(host, requested)
     url = f"http://{host}:{port}"
