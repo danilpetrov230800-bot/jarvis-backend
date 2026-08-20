@@ -11,12 +11,15 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import uvicorn
 from dotenv import load_dotenv
 
 from jarvis.net import find_free_port
 
-ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 LOG = ROOT / "data" / "nova.log"
 

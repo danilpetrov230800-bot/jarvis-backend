@@ -33,6 +33,29 @@ function Get-FileSha256([string]$Path) {
     return (Get-FileHash -Path $Path -Algorithm SHA256).Hash
 }
 
+function Enable-ProjectPath {
+    if (-not (Test-Path $RuntimeDir)) { return }
+    $pth = Get-ChildItem $RuntimeDir -Filter "python*._pth" | Select-Object -First 1
+    if (-not $pth) { return }
+    $lines = New-Object System.Collections.Generic.List[string]
+    $hasParent = $false
+    $hasSite = $false
+    foreach ($line in (Get-Content -Path $pth.FullName)) {
+        $trim = $line.Trim()
+        if ($trim -eq "#import site") {
+            $lines.Add("import site")
+            $hasSite = $true
+            continue
+        }
+        if ($trim -eq "..") { $hasParent = $true }
+        if ($trim -eq "import site") { $hasSite = $true }
+        if ($trim -ne "") { $lines.Add($trim) }
+    }
+    if (-not $hasParent) { $lines.Add("..") }
+    if (-not $hasSite) { $lines.Add("import site") }
+    Set-Content -Path $pth.FullName -Value ($lines -join "`r`n") -Encoding ASCII
+}
+
 function Install-PortablePython {
     if (Test-Path $Python) { return }
     Write-Step "Downloading portable Python $PythonVersion..."
@@ -50,6 +73,7 @@ function Install-PortablePython {
         $content = $content.TrimEnd() + "`r`nimport site`r`n"
     }
     Set-Content -Path $pth.FullName -Value $content -Encoding ASCII
+    Enable-ProjectPath
 
     Write-Step "Installing pip..."
     $getPip = Join-Path $RuntimeDir "get-pip.py"
@@ -94,6 +118,8 @@ function Start-Nova {
     }
     Write-Step "Starting NOVA..."
     Set-Location $Root
+    $env:PYTHONPATH = $Root
+    Enable-ProjectPath
     New-Item -ItemType Directory -Force -Path (Join-Path $Root "data") | Out-Null
     Write-Host "NOVA UI: http://127.0.0.1:8080"
     Write-Host "Keep this window open."
@@ -107,6 +133,7 @@ function Start-Nova {
 
 Unblock-Tree $Root
 Install-PortablePython
+Enable-ProjectPath
 Install-Dependencies
 Install-Shortcut
 if (-not $SkipRun) {

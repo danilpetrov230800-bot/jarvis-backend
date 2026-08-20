@@ -34,7 +34,8 @@ def test_bootstrap_downloads_embeddable_python():
     assert "embed-amd64.zip" in text
     assert "get-pip.py" in text
     assert "CreateShortcut" in text
-    assert "Keep this window open" in text
+    assert "Enable-ProjectPath" in text
+    assert 'Add("..")' in text or '".."' in text
     assert "Unblock-File" in text
 
 
@@ -51,6 +52,12 @@ def test_package_contains_runtime_files_not_tests(tmp_path):
     zpath = tmp_path / "NOVA-windows.zip"
     write_zip(zpath)
     assert zpath.stat().st_size > 1000
+
+
+def test_run_py_puts_project_on_path_before_jarvis_import():
+    text = (ROOT / "run.py").read_text(encoding="utf-8")
+    assert text.find("sys.path.insert") < text.find("from jarvis")
+    assert "Path(__file__).resolve().parent" in text
 
 
 def test_home_has_nova_ui(client):

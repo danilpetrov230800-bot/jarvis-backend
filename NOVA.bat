@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
+set "PYTHONPATH=%~dp0"
 title NOVA
 if not exist "%~dp0data" mkdir "%~dp0data"
 echo.
