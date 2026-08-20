@@ -84,7 +84,7 @@ def test_bounded_execution_timeout_and_retry(isolated_data):
 
     assert core.run_bounded(flaky, timeout=1, retry_limit=1) == "ok"
     with pytest.raises(TimeoutError):
-        core.run_bounded(lambda: time.sleep(0.1), timeout=0.01, retry_limit=0)
+        core.run_bounded(lambda: time.sleep(0.25), timeout=0.1, retry_limit=0)
 
 
 def test_malformed_records_rejected(isolated_data):
