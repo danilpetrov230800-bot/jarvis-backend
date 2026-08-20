@@ -1,8 +1,10 @@
-Artifacts are produced by GitHub Actions (`NOVA-Setup` and `NOVA-windows`).
+Artifacts for this commit (`02e7d1d`) from GitHub Actions:
 
-Copy them here after a successful `windows-package` run:
+- `NOVA-Setup.exe` — installer, Start Menu, desktop shortcut, uninstall
+- `NOVA-Portable.zip` — portable copy with Python inside (`NOVA.vbs`)
+- `SHA256.txt`
 
-- NOVA-Setup.exe
-- NOVA-windows.zip
-- SHA256.txt
-- RELEASE_NOTES.md (see docs/RELEASE_NOTES.md)
+User flow: download Setup → Install → shortcut → say «Нова».
+
+Public download: https://github.com/danilpetrov230800-bot/jarvis-backend/actions/runs/32416814302
+

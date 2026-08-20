@@ -21,3 +21,4 @@ htmlcov/
 runtime/
 dist/
 *.zip
+*.exe
