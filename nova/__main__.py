@@ -12,11 +12,14 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-APP_ROOT = Path(__file__).resolve().parents[1]
+from nova.boot import prepare, write_crash
+from nova.paths import app_root
+
+prepare()
+
+APP_ROOT = app_root()
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
-
-os.environ.setdefault("PYTHONUTF8", "1")
 
 from dotenv import load_dotenv
 
@@ -34,6 +37,22 @@ def _find_port(host: str, preferred: int) -> int:
             return int(sock.getsockname()[1])
 
 
+def _serve(app, host: str, port: int) -> None:
+    import uvicorn
+
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level="warning",
+        access_log=False,
+        lifespan="on",
+        reload=False,
+        workers=1,
+    )
+    uvicorn.Server(config).run()
+
+
 def main() -> None:
     from nova.app import app, kernel
     from nova.logging_service import LogService
@@ -44,7 +63,7 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--browser", action="store_true")
     parser.add_argument("--no-window", action="store_true")
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     settings = kernel.settings.current
     host = args.host or settings.host
@@ -52,17 +71,12 @@ def main() -> None:
     url = f"http://{host}:{port}"
     log.info("starting NOVA", url=url)
 
-    import uvicorn
-
     no_window = args.no_window or os.environ.get("NOVA_NO_WINDOW") == "1" or not settings.open_window
     if no_window:
-        uvicorn.run(app, host=host, port=port, log_level="warning")
+        _serve(app, host, port)
         return
 
-    server = threading.Thread(
-        target=lambda: uvicorn.run(app, host=host, port=port, log_level="warning"),
-        daemon=True,
-    )
+    server = threading.Thread(target=lambda: _serve(app, host, port), daemon=True)
     server.start()
     health = url.rstrip("/") + "/health"
     for _ in range(80):
@@ -87,8 +101,9 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
-        main()
-    except Exception:
+        raise SystemExit(main() or 0)
+    except Exception as exc:
+        write_crash(exc)
         logging.basicConfig(level=logging.ERROR)
         logging.exception("NOVA crashed")
         traceback.print_exc()

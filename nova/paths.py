@@ -6,20 +6,35 @@ from pathlib import Path
 
 
 def app_root() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         return Path(meipass)
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        internal = exe_dir / "_internal"
+        return internal if internal.exists() else exe_dir
+    return Path(__file__).resolve().parents[1]
+
+
+def runtime_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parents[1]
 
 
 def static_dir() -> Path:
-    root = app_root()
-    for candidate in (root / "static", Path(getattr(sys, "_MEIPASS", root)) / "static"):
+    candidates = [
+        app_root() / "static",
+        runtime_dir() / "static",
+        Path(__file__).resolve().parents[1] / "static",
+    ]
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.insert(0, Path(meipass) / "static")
+    for candidate in candidates:
         if candidate.exists():
             return candidate
-    return root / "static"
+    return app_root() / "static"
 
 
 def data_dir() -> Path:

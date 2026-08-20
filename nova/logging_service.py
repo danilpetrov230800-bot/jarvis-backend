@@ -6,6 +6,7 @@ import logging.handlers
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 from typing import Any
 
 from nova.constants import MAX_LOG_BYTES
@@ -58,10 +59,15 @@ class LogService:
             handler.setFormatter(
                 RedactingFormatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
             )
-            stream = logging.StreamHandler()
-            stream.setFormatter(RedactingFormatter("%(asctime)s [%(levelname)s] %(message)s"))
             self.logger.addHandler(handler)
-            self.logger.addHandler(stream)
+            stream = getattr(sys, "stderr", None) or getattr(sys, "stdout", None)
+            if stream is not None:
+                try:
+                    console = logging.StreamHandler(stream)
+                    console.setFormatter(RedactingFormatter("%(asctime)s [%(levelname)s] %(message)s"))
+                    self.logger.addHandler(console)
+                except Exception:
+                    pass
 
     def emit(self, level: str, message: str, *, category: str = "INFO", extra: dict[str, Any] | None = None) -> None:
         lvl = LEVELS.get(level.upper(), logging.INFO)
