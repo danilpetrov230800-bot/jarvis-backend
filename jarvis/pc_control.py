@@ -5,6 +5,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
+from jarvis.permissions import require
 
 @dataclass
 class PcState:
@@ -33,36 +34,43 @@ def _key(virtual_key: int, times: int = 1) -> None:
 
 
 def volume_up(steps: int = 4) -> str:
+    require("SYSTEM_SETTINGS")
     _key(VK_VOLUME_UP, steps)
     return "Громкость выше."
 
 
 def volume_down(steps: int = 4) -> str:
+    require("SYSTEM_SETTINGS")
     _key(VK_VOLUME_DOWN, steps)
     return "Громкость ниже."
 
 
 def volume_mute() -> str:
+    require("SYSTEM_SETTINGS")
     _key(VK_VOLUME_MUTE)
     return "Звук переключён (mute)."
 
 
 def media_play_pause() -> str:
+    require("SYSTEM_SETTINGS")
     _key(VK_MEDIA_PLAY_PAUSE)
     return "Пауза / воспроизведение."
 
 
 def media_next() -> str:
+    require("SYSTEM_SETTINGS")
     _key(VK_MEDIA_NEXT)
     return "Следующий трек."
 
 
 def media_prev() -> str:
+    require("SYSTEM_SETTINGS")
     _key(VK_MEDIA_PREV)
     return "Предыдущий трек."
 
 
 def set_brightness(percent: int) -> str:
+    require("SYSTEM_SETTINGS")
     if not _win():
         raise RuntimeError("яркость доступна в Windows")
     value = max(0, min(100, int(percent)))
@@ -84,6 +92,7 @@ def brightness_down() -> str:
 
 
 def open_sound_settings() -> str:
+    require("SYSTEM_SETTINGS")
     if not _win():
         raise RuntimeError("микшер звука доступен в Windows")
     subprocess.Popen(["sndvol.exe"], close_fds=True)
@@ -91,6 +100,7 @@ def open_sound_settings() -> str:
 
 
 def open_display_settings() -> str:
+    require("SYSTEM_SETTINGS")
     if not _win():
         raise RuntimeError("настройки экрана доступны в Windows")
     subprocess.Popen(["cmd", "/c", "start", "", "ms-settings:display"], close_fds=True)
@@ -98,6 +108,7 @@ def open_display_settings() -> str:
 
 
 def sleep_pc() -> str:
+    require("SYSTEM_SETTINGS")
     if not _win():
         raise RuntimeError("сон доступен в Windows")
     subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])

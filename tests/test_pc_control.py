@@ -3,6 +3,7 @@ from jarvis.pc_control import handle_pc_intent
 
 def test_volume_up_intent(monkeypatch):
     called = []
+    monkeypatch.setattr("jarvis.pc_control.require", lambda permission: None)
     monkeypatch.setattr("jarvis.pc_control._key", lambda vk, times=1: called.append((vk, times)))
     result = handle_pc_intent("громче")
     assert result is not None
@@ -12,6 +13,7 @@ def test_volume_up_intent(monkeypatch):
 
 
 def test_mute_and_play(monkeypatch):
+    monkeypatch.setattr("jarvis.pc_control.require", lambda permission: None)
     monkeypatch.setattr("jarvis.pc_control._key", lambda *args, **kwargs: None)
     mute = handle_pc_intent("выключи звук")
     play = handle_pc_intent("пауза")

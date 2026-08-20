@@ -62,12 +62,15 @@ def _first_env(*names: str) -> str:
 
 def load_settings() -> Settings:
     file_data = {k: v for k, v in _read_json(SETTINGS_PATH).items() if v not in ("", None)}
+    legacy_key = str(file_data.pop("api_key", ""))
     settings = Settings.model_validate(file_data)
-    from jarvis.secrets import load_api_key
+    from jarvis.secrets import load_api_key, save_api_key
 
     stored_key = load_api_key()
-    if stored_key:
-        settings.api_key = stored_key
+    settings.api_key = stored_key or legacy_key
+    if legacy_key and not stored_key:
+        save_api_key(legacy_key)
+        SETTINGS_PATH.write_text(json.dumps(file_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     settings.user_name = os.getenv("NOVA_USER_NAME", os.getenv("JARVIS_USER_NAME", settings.user_name))
     settings.assistant_name = os.getenv("NOVA_ASSISTANT_NAME", os.getenv("JARVIS_ASSISTANT_NAME", settings.assistant_name))

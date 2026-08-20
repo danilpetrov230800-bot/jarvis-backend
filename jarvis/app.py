@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,14 @@ from jarvis.voice import list_russian_voices, speech_preview, synthesize
 
 STATIC = ROOT / "static"
 
-app = FastAPI(title="NOVA", version="2.0.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    initialize()
+    yield
+
+
+app = FastAPI(title="NOVA", version="2.0.0", lifespan=lifespan)
 
 
 @app.exception_handler(ValueError)
@@ -85,6 +93,7 @@ class MemoryIn(BaseModel):
 
 class BackupIn(BaseModel):
     path: str
+    confirmed: bool = False
 
 
 class FileToolIn(BaseModel):
@@ -95,11 +104,6 @@ class FileToolIn(BaseModel):
     content: str = ""
     paths: list[str] = Field(default_factory=list)
     confirmed: bool = False
-
-
-@app.on_event("startup")
-def startup() -> None:
-    initialize()
 
 
 @app.get("/api/status")
@@ -205,6 +209,9 @@ def backup() -> dict[str, str]:
 
 @app.post("/api/restore")
 def restore(payload: BackupIn) -> dict[str, str]:
+    require("WRITE_FILES")
+    if not payload.confirmed:
+        raise HTTPException(400, "Восстановление требует явного подтверждения")
     restore_backup(Path(payload.path))
     return {"status": "restored"}
 

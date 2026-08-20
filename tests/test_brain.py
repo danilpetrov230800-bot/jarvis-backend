@@ -42,6 +42,7 @@ async def test_wiki_intent(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_volume_command(monkeypatch):
+    monkeypatch.setattr("jarvis.pc_control.require", lambda permission: None)
     monkeypatch.setattr("jarvis.pc_control._key", lambda *args, **kwargs: None)
     result = await respond(Settings(api_key=""), [], "громче")
     assert "volume" in result["tools"]

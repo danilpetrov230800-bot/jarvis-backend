@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from jarvis.config import DATA_DIR, load_settings
@@ -11,7 +10,6 @@ MEMORY_PATH = DATA_DIR / "memory.json"
 class ConversationMemory:
     def __init__(self) -> None:
         self.messages: list[dict[str, Any]] = []
-        self.load()
 
     def load(self) -> None:
         if not MEMORY_PATH.exists():
@@ -24,11 +22,9 @@ class ConversationMemory:
             self.messages = []
 
     def save(self) -> None:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        MEMORY_PATH.write_text(
-            json.dumps({"messages": self.messages[-80:]}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        # Conversation context is intentionally session-only. Explicit long-term
+        # memories are stored through jarvis.core after user confirmation.
+        return
 
     def add(self, role: str, content: str) -> None:
         if not content:
@@ -43,4 +39,4 @@ class ConversationMemory:
 
     def clear(self) -> None:
         self.messages = []
-        self.save()
+        MEMORY_PATH.unlink(missing_ok=True)
