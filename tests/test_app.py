@@ -41,3 +41,13 @@ def test_pc_endpoints(client, monkeypatch):
     assert ok.json()["action"] == "volume_up"
     missing = client.post("/api/pc", json={"action": "explode"})
     assert missing.status_code == 400
+
+
+def test_diagnostics_and_memory(client):
+    diag = client.get("/api/diagnostics")
+    assert diag.status_code == 200
+    assert diag.json()["result"] in {"PASS", "WARNING", "FAIL"}
+    added = client.post("/api/memory-long", json={"content": "тест памяти"})
+    assert added.status_code == 200
+    listed = client.get("/api/memory-long")
+    assert any("тест памяти" in (row.get("content") or "") for row in listed.json()["items"])

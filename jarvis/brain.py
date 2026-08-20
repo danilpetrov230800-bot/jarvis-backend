@@ -4,12 +4,16 @@ import logging
 import re
 from typing import Any
 
+from jarvis.apps import launch_named
 from jarvis.config import Settings
 from jarvis.desktop import ActionResult, handle_intent, help_text
+from jarvis.files_agent import handle_file_intent
 from jarvis.llm import LLMError, chat_once
+from jarvis.memory_long import add_memory, recall_text
 from jarvis.pc_control import handle_pc_intent
 from jarvis.prompts import search_needed
 from jarvis.search import serialize_sources, search_web
+from jarvis.skills import create_skill, match_skill
 from jarvis import services
 
 WEATHER_RE = re.compile(r"погод[аеуы]?\s*(?:в\s+)?(.+)?$", re.I)
@@ -76,11 +80,93 @@ async def respond(settings: Settings, history: list[dict[str, Any]], text: str) 
     if lowered in GREETINGS:
         return _pack("Привет. Я Nova. Могу открыть сайт, прибавить звук, сказать пробки и погоду — без ключа.")
 
+    if lowered.startswith("запомни"):
+        content = re.sub(r"^запомни[,:\s]*(что\s+)?", "", text.strip(), flags=re.I).strip()
+        if content:
+            item = add_memory(content, kind="note")
+            return _pack(f"Запомнила: {item['content']}", tools=["memory"])
+
+    if lowered in {"что ты помнишь", "что помнишь", "вспомни"} or lowered.startswith("вспомни "):
+        query = re.sub(r"^вспомни\s+", "", lowered)
+        if query in {"что ты помнишь", "что помнишь", "вспомни"}:
+            query = ""
+        return _pack(recall_text(query), tools=["memory"])
+
+    if lowered.startswith("всегда делай") or lowered.startswith("всегда "):
+        content = re.sub(r"^всегда (делай[,:\s]*)?", "", text.strip(), flags=re.I).strip()
+        if content:
+            item = add_memory(content, kind="preference")
+            return _pack(f"Сохранила предпочтение: {item['content']}", tools=["memory"])
+
+    learn = re.match(r"^научись делать\s+(.+)$", text.strip(), re.I)
+    if learn:
+        skill = create_skill(learn.group(1), learn.group(1), action_text=learn.group(1))
+        return _pack(f"Навык сохранён. Триггер: {skill['trigger_text']}.", tools=["skill"])
+
+    skill_make = re.match(
+        r"когда я говорю\s+[«\"']?(.+?)[»\"']?\s*,\s*(.+)$",
+        text.strip(),
+        re.I,
+    )
+    if skill_make:
+        skill = create_skill(skill_make.group(1), skill_make.group(1), action_text=skill_make.group(2))
+        return _pack(f"Навык сохранён. Триггер: {skill['trigger_text']}.", tools=["skill"])
+
+    matched = match_skill(text)
+    if matched:
+        return _from_action(matched)
+
+    if lowered.startswith("агент ") or lowered.startswith("выполни задачу") or lowered.startswith("задача:") or lowered.startswith("поручи "):
+        from jarvis.agent import run_agent
+        from jarvis.agents_catalog import find_agent
+
+        query = re.sub(r"^(агент|выполни задачу|задача:|поручи)\s*", "", text.strip(), flags=re.I)
+        specialist = None
+        named = re.match(r"^([A-Za-zА-Яа-я]+)\s*[:\-]\s*(.+)$", query)
+        if named:
+            specialist = find_agent(named.group(1))
+            if specialist:
+                query = named.group(2)
+        return _pack(**(await run_agent(query, region=settings.search_region, agent=specialist)))
+
+    if lowered.startswith("исследуй ") or lowered.startswith("research "):
+        from jarvis.research import research as do_research
+
+        query = re.sub(r"^(исследуй|research)\s+", "", text.strip(), flags=re.I)
+        try:
+            data = await do_research(query, region=settings.search_region)
+            return _pack(str(data["reply"]), tools=list(data.get("tools") or ["research"]), sources=list(data.get("sources") or []))
+        except PermissionError as exc:
+            return _pack(str(exc), tools=["permission"])
+
+    try:
+        file_hit = handle_file_intent(text)
+    except PermissionError as exc:
+        return _pack(str(exc), tools=["permission"])
+    if file_hit:
+        return _pack(str(file_hit["reply"]), tools=list(file_hit.get("tools") or ["files"]))
+
+    if any(p in lowered for p in ("посмотри на экран", "что на экране", "посмотри экран", "что произошло")):
+        from jarvis.desktop import describe_screen
+
+        return _pack(describe_screen(), tools=["screen"])
+
+    if any(p in lowered for p in ("что с компьютер", "тормозит", "что происходит с компьютер", "состояние пк")):
+        from jarvis.desktop import diagnose_machine
+
+        return _pack(diagnose_machine(), tools=["system_info"])
+
     pc = handle_pc_intent(lowered)
     if pc:
         return _pack(pc.reply, tools=pc.tools)
 
     action = handle_intent(text)
+    if action and "open_unknown" in action.tools:
+        name_match = re.search(r"«(.+?)»", action.reply)
+        if name_match:
+            launched = launch_named(name_match.group(1))
+            if not launched.startswith("Не нашла"):
+                return _pack(launched, tools=["open_app"])
     if action and "open_unknown" not in action.tools:
         return _from_action(action)
 

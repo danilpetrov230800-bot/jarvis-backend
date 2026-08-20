@@ -76,5 +76,13 @@ async def test_translate_to_english(monkeypatch):
     assert "translate" in result["tools"]
 
 
-def test_summarize_search_empty():
-    assert "ничего не нашла" in summarize_search("zzz", [])
+@pytest.mark.asyncio
+async def test_remember_and_recall(tmp_path, monkeypatch):
+    monkeypatch.setattr("jarvis.store.DATA_DIR", tmp_path)
+    from jarvis.store import migrate
+
+    migrate()
+    saved = await respond(Settings(api_key=""), [], "запомни, что любимый браузер Chrome")
+    assert "memory" in saved["tools"]
+    recalled = await respond(Settings(api_key=""), [], "что ты помнишь")
+    assert "Chrome" in recalled["reply"]

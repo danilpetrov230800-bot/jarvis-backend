@@ -5,14 +5,31 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data"
+
+
+def resolve_data_dir() -> Path:
+    env = os.getenv("NOVA_DATA_DIR") or os.getenv("JARVIS_DATA_DIR")
+    if env:
+        return Path(env)
+    legacy = ROOT / "data"
+    if os.name == "nt":
+        local = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")) / "NOVA"
+        if (legacy / "settings.json").exists() or (legacy / "nova.db").exists():
+            return legacy
+        return local
+    return legacy
+
+
+DATA_DIR = resolve_data_dir()
 SETTINGS_PATH = DATA_DIR / "settings.json"
 
 
 class Settings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     provider: str = "auto"
     api_key: str = ""
     base_url: str = ""
@@ -27,8 +44,10 @@ class Settings(BaseModel):
     port: int = 8080
     open_browser: bool = True
     max_history: int = 24
-
-    extra: dict[str, Any] = Field(default_factory=dict)
+    setup_done: bool = False
+    wake_word: bool = True
+    theme: str = "dark"
+    tts_enabled: bool = True
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -75,7 +94,7 @@ def load_settings() -> Settings:
 
 def save_settings(settings: Settings) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    payload = settings.model_dump(exclude={"extra"})
+    payload = settings.model_dump()
     SETTINGS_PATH.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -98,11 +117,17 @@ def public_settings(settings: Settings) -> dict[str, Any]:
         "has_api_key": bool(settings.api_key),
         "api_key_preview": masked,
         "resolved_provider": infer_provider(settings),
+        "setup_done": settings.setup_done,
+        "wake_word": settings.wake_word,
+        "theme": settings.theme,
+        "tts_enabled": settings.tts_enabled,
     }
 
 
 def infer_provider(settings: Settings) -> str:
     if settings.provider and settings.provider != "auto":
+        if settings.provider == "compatible":
+            return "openai"
         return settings.provider
     if "openrouter" in settings.base_url or os.getenv("OPENROUTER_API_KEY"):
         return "openrouter"
@@ -141,8 +166,16 @@ def inferred_model(settings: Settings) -> str:
 
 def merge_settings(current: Settings, patch: dict[str, Any]) -> Settings:
     data = current.model_dump()
-    allowed = set(Settings.model_fields) - {"extra"}
+    allowed = set(Settings.model_fields)
     for key, value in patch.items():
         if key in allowed and value is not None:
             data[key] = value
     return Settings.model_validate(data)
+
+
+def clear_api_key(settings: Settings) -> Settings:
+    data = settings.model_dump()
+    data["api_key"] = ""
+    updated = Settings.model_validate(data)
+    save_settings(updated)
+    return updated

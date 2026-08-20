@@ -95,9 +95,15 @@ async def synthesize(text: str, voice: str = DEFAULT_VOICE, rate: str = "+12%") 
                 buffer.write(chunk["data"])
         data = buffer.getvalue()
         if data:
+            from jarvis.recovery import mark_ok
+
+            mark_ok("tts")
             _write_cache(path, data)
             return data, "audio/mpeg"
     except Exception:
+        from jarvis.recovery import mark_fail
+
+        mark_fail("tts")
         log.exception("edge-tts failed, trying local voice")
 
     if sys.platform == "win32":

@@ -154,6 +154,71 @@ def take_screenshot() -> Path:
     return path
 
 
+def describe_screen() -> str:
+    from jarvis.permissions import allowed, deny_message
+
+    if not allowed("SCREEN_CONTROL"):
+        return deny_message("SCREEN_CONTROL")
+    path = take_screenshot()
+    if not path.exists() or path.stat().st_size < 8:
+        return "Снимок экрана сейчас недоступен. Продолжаю в текстовом режиме."
+    text = ""
+    try:
+        import pytesseract
+        from PIL import Image
+
+        text = (pytesseract.image_to_string(Image.open(path), lang="rus+eng") or "").strip()
+    except Exception:
+        text = ""
+    if text:
+        return f"С экрана прочитала: {text[:800]}\nСнимок: {path}"
+    return f"Скриншот сохранён: {path}. Откройте файл, чтобы увидеть экран."
+
+
+def diagnose_machine() -> str:
+    info = system_info()
+    hint = (
+        "Если компьютер тормозит: закройте лишние вкладки браузера, "
+        "проверьте свободное место на диске и завершите тяжёлые программы."
+    )
+    return f"{info}\n{hint}"
+
+
+def _memory_line() -> str:
+    try:
+        if hasattr(os, "sysconf"):
+            pages = os.sysconf("SC_PHYS_PAGES")
+            page = os.sysconf("SC_PAGE_SIZE")
+            if pages and page:
+                total = pages * page / 1024**3
+                return f"ОЗУ: {total:.1f} ГБ"
+    except Exception:
+        pass
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"],
+                capture_output=True,
+                text=True,
+                timeout=8,
+                check=False,
+            )
+            raw = (result.stdout or "").strip().splitlines()
+            if raw and raw[-1].isdigit():
+                return f"ОЗУ: {int(raw[-1]) / 1024**3:.1f} ГБ"
+        except Exception:
+            return ""
+    return ""
+
+
+def _cpu_line() -> str:
+    try:
+        load = os.getloadavg()[0]
+        return f"Нагрузка CPU: {load:.2f}"
+    except Exception:
+        return f"Процессор: {platform.processor() or platform.machine()}"
+
+
 def system_info() -> str:
     cpu = platform.processor() or platform.machine()
     target = ROOT.anchor or str(ROOT)
@@ -170,6 +235,12 @@ def system_info() -> str:
         f"Диск: {disk}",
         f"Папка NOVA: {ROOT}",
     ]
+    ram = _memory_line()
+    if ram:
+        lines.append(ram)
+    load = _cpu_line()
+    if load:
+        lines.append(load)
     battery = _battery_line()
     if battery:
         lines.append(battery)
@@ -403,5 +474,8 @@ def help_text() -> str:
         "• таймер 5 минут / скопируй: текст / буфер обмена / заблокируй\n"
         "• сделай скриншот / запиши: купить молоко / посчитай 24*7\n"
         "• открой wikipedia.org\n"
+        "• запомни, что … / что ты помнишь / когда я говорю «режим работы», открой Chrome\n"
+        "• агент: найди и сравни / поручи Research: …\n"
+        "• найди файлы pdf / создай файл заметка.txt / состояние ПК\n"
         "А если спросите «что такое кванты» — поищу в интернете."
     )

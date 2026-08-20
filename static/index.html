@@ -14,12 +14,27 @@
   <div class="aurora" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
 
+  <div class="app-shell">
+  <nav class="side" id="sideNav">
+    <button type="button" data-page="home" class="active">Чат</button>
+    <button type="button" data-page="agents">Агенты</button>
+    <button type="button" data-page="memory">Память</button>
+    <button type="button" data-page="skills">Навыки</button>
+    <button type="button" data-page="tasks">Задачи</button>
+    <button type="button" data-page="tools">Инструменты</button>
+    <button type="button" data-page="research">Исследование</button>
+    <button type="button" data-page="logs">Логи</button>
+    <button type="button" id="sideSettings" data-page="settings">Настройки</button>
+  </nav>
+  <div class="stage">
+
   <header class="topbar">
     <div class="brand">
       <span class="mark">N</span>
       <div>
         <strong id="assistantName">NOVA</strong>
         <small id="statusLine">ожидание</small>
+        <span id="offlinePill" class="offline-pill hidden">Offline mode</span>
       </div>
     </div>
     <div class="top-actions">
@@ -29,7 +44,7 @@
     </div>
   </header>
 
-  <main class="layout">
+  <main class="layout page active" data-page="home">
     <section class="hud-col">
       <div id="hud" class="hud idle" aria-hidden="true">
         <div class="halo"></div>
@@ -82,6 +97,118 @@
     </section>
   </main>
 
+  <section class="page panel" data-page="memory">
+    <h2>Память</h2>
+    <form id="memoryForm" class="row-form">
+      <input id="memoryText" placeholder="Запомни это…" />
+      <button type="submit">Сохранить</button>
+    </form>
+    <div class="row-form">
+      <button id="memoryExport" type="button">Экспорт</button>
+      <button id="memoryImportBtn" type="button">Импорт</button>
+      <button id="memoryClear" type="button">Очистить</button>
+      <input id="memoryImportFile" type="file" accept="application/json" hidden />
+    </div>
+    <div id="memoryList" class="list"></div>
+  </section>
+
+  <section class="page panel" data-page="agents">
+    <h2>Агенты</h2>
+    <p class="hint">NOVA может поручить задачу специалисту. Никаких скрытых цепочек рассуждений — только статус шагов.</p>
+    <form id="agentForm" class="stack-form">
+      <input id="agentName" placeholder="Имя, например Research" />
+      <input id="agentRole" placeholder="Роль" />
+      <input id="agentInstructions" placeholder="Инструкции" />
+      <button type="submit">Создать агента</button>
+    </form>
+    <div id="agentList" class="list"></div>
+  </section>
+
+  <section class="page panel" data-page="skills">
+    <h2>Навыки</h2>
+    <form id="skillForm" class="stack-form">
+      <input id="skillTrigger" placeholder="Когда я говорю…" />
+      <input id="skillAction" placeholder="открой chrome и калькулятор" />
+      <button type="submit">Создать навык</button>
+    </form>
+    <div id="skillList" class="list"></div>
+  </section>
+
+  <section class="page panel" data-page="tasks">
+    <h2>Задачи</h2>
+    <form id="taskForm" class="row-form">
+      <input id="taskTitle" placeholder="Напомни…" />
+      <input id="taskSeconds" type="number" min="0" value="60" />
+      <button type="submit">Поставить</button>
+    </form>
+    <div id="taskList" class="list"></div>
+  </section>
+
+  <section class="page panel" data-page="tools">
+    <h2>Инструменты</h2>
+    <p class="hint">Диагностика и файлы в Документах / Загрузках / на Рабочем столе.</p>
+    <button id="diagBtn" type="button">Проверить NOVA</button>
+    <pre id="diagOut" class="logbox"></pre>
+    <form id="fileForm" class="row-form">
+      <input id="fileQuery" placeholder="имя или pdf" />
+      <button type="submit">Найти файлы</button>
+    </form>
+    <form id="fileCreateForm" class="row-form">
+      <input id="fileCreateName" placeholder="новый файл.txt" />
+      <button type="submit">Создать файл</button>
+    </form>
+    <div id="fileList" class="list"></div>
+    <button id="sysBtn" type="button">Состояние ПК</button>
+    <button id="backupBtn" type="button">Резервная копия</button>
+    <button id="restoreBtn" type="button">Восстановить последнюю</button>
+    <pre id="toolOut" class="logbox"></pre>
+    <div id="permBox" class="perm-box"></div>
+  </section>
+
+  <section class="page panel" data-page="research">
+    <h2>Исследование</h2>
+    <p class="hint">Только открытые источники. Включите разрешение RESEARCH.</p>
+    <form id="researchForm" class="row-form">
+      <input id="researchQuery" placeholder="публичный запрос" />
+      <button type="submit">Искать</button>
+    </form>
+    <pre id="researchOut" class="logbox"></pre>
+  </section>
+
+  <section class="page panel" data-page="logs">
+    <h2>Логи</h2>
+    <button id="logRefresh" type="button">Обновить</button>
+    <button id="logCopy" type="button">Копировать</button>
+    <a id="logExport" href="/api/logs/export">Экспорт логов</a>
+    <pre id="logBox" class="logbox"></pre>
+  </section>
+
+  </div>
+  </div>
+
+  <div id="wizard" class="setup hidden" hidden>
+    <div class="setup-card">
+      <div class="setup-mark">N</div>
+      <h2>Добро пожаловать</h2>
+      <p>NOVA работает без ключа. Ключ можно добавить позже в настройках.</p>
+      <label>Ваше имя
+        <input id="wizName" value="Данила" />
+      </label>
+      <label>API-ключ (необязательно)
+        <input id="wizKey" type="password" placeholder="gsk_... или sk-or-..." autocomplete="off" />
+      </label>
+      <div class="dialog-actions">
+        <button id="wizMic" type="button">Проверить микрофон</button>
+        <button id="wizVoice" type="button">Проверить голос</button>
+      </div>
+      <p id="wizProbe" class="hint"></p>
+      <div class="dialog-actions">
+        <button id="wizSkip" type="button">Пропустить</button>
+        <button id="wizSave" type="button">Продолжить</button>
+      </div>
+    </div>
+  </div>
+
   <div id="setup" class="setup hidden" hidden>
     <div class="setup-card">
       <div class="setup-mark">N</div>
@@ -110,6 +237,7 @@
           <option value="openai">OpenAI</option>
           <option value="groq">Groq</option>
           <option value="ollama">Ollama (локально)</option>
+          <option value="compatible">Совместимый API</option>
         </select>
       </label>
       <label>Модель
@@ -127,11 +255,37 @@
       <label>Голос
         <select name="tts_voice"></select>
       </label>
+      <label>Скорость речи
+        <select name="tts_rate">
+          <option value="-10%">медленнее</option>
+          <option value="+0%">обычно</option>
+          <option value="+12%" selected>чуть быстрее</option>
+          <option value="+25%">быстрее</option>
+        </select>
+      </label>
+      <label>Тема
+        <select name="theme">
+          <option value="dark">Тёмная</option>
+          <option value="light">Светлая</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="wake_word" /> Wake word «Нова»</label>
+      <label class="check"><input type="checkbox" name="tts_enabled" /> Голосовые ответы</label>
+      <p id="updateNote" class="hint"></p>
       <div class="dialog-actions">
         <button value="cancel" type="button" id="closeSettings">Закрыть</button>
+        <button type="button" id="clearKey">Удалить ключ</button>
         <button value="save" id="saveSettings">Сохранить</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="confirmDlg">
+    <p id="confirmText">Подтвердить действие?</p>
+    <div class="dialog-actions">
+      <button type="button" id="confirmNo">Отмена</button>
+      <button type="button" id="confirmYes">Подтвердить</button>
+    </div>
   </dialog>
 
   <script src="/static/js/app.js"></script>

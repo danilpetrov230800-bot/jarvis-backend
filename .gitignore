@@ -6,6 +6,9 @@ venv/
 .env
 data/settings.json
 data/memory.json
+data/nova.db
+data/permissions.json
+data/backups/
 data/audio/
 data/tts_cache/
 .pytest_cache/

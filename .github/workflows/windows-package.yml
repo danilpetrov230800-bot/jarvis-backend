@@ -27,9 +27,28 @@ jobs:
         shell: powershell
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File installer\build-portable.ps1
+      - name: Build NOVA-Setup.exe
+        shell: powershell
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe" }
+          & $iscc installer\nova.iss
+          if (-not (Test-Path dist\NOVA-Setup.exe)) { throw "NOVA-Setup.exe was not created" }
+          $shaSetup = (Get-FileHash dist\NOVA-Setup.exe -Algorithm SHA256).Hash
+          $shaZip = (Get-FileHash dist\NOVA-windows.zip -Algorithm SHA256).Hash
+          Set-Content -Path dist\SHA256.txt -Value "$shaSetup  NOVA-Setup.exe`r`n$shaZip  NOVA-windows.zip" -Encoding ASCII
       - name: Upload NOVA-windows.zip
         uses: actions/upload-artifact@v4
         with:
           name: NOVA-windows
           path: dist/NOVA-windows.zip
+          if-no-files-found: error
+      - name: Upload NOVA-Setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOVA-Setup
+          path: |
+            dist/NOVA-Setup.exe
+            dist/SHA256.txt
           if-no-files-found: error

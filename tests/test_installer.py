@@ -47,6 +47,7 @@ def test_bootstrap_downloads_embeddable_python():
 
 def test_package_contains_runtime_files_not_tests(tmp_path):
     names = relative_names()
+    assert "NOVA.vbs" in names
     assert "NOVA.bat" in names
     assert "JARVIS.bat" in names
     assert "run.py" in names
@@ -74,6 +75,20 @@ def test_home_has_nova_ui(client):
     assert "pcDock" in html
     assert "stopBtn" in html
     assert "chips" in html
+    assert "sideNav" in html
+    assert "wizard" in html
+    assert 'data-page="agents"' in html
+    assert "confirmDlg" in html
+
+
+def test_silent_launcher_and_inno_script():
+    vbs = (ROOT / "NOVA.vbs").read_bytes()
+    assert vbs.isascii()
+    assert b"pythonw.exe" in vbs
+    iss = (ROOT / "installer" / "nova.iss").read_bytes()
+    assert iss.isascii()
+    assert b"NOVA-Setup" in iss
+    assert b"PrivilegesRequired=lowest" in iss
 
 
 def test_run_py_has_no_browser_flag():

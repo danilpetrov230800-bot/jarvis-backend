@@ -1,31 +1,47 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from jarvis.api_extra import router as extra_router
 from jarvis.brain import respond
 from jarvis.config import load_settings, merge_settings, public_settings, save_settings
 from jarvis.memory import ConversationMemory
+from jarvis.offline import is_offline, status_label
+from jarvis.store import migrate
 from jarvis.voice import list_russian_voices, speech_preview, synthesize
+
+log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
 
-app = FastAPI(title="NOVA", version="1.4.0")
+app = FastAPI(title="NOVA", version="1.5.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(extra_router)
+migrate()
 
 memory = ConversationMemory()
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(_request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, HTTPException):
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+    log.exception("unhandled error")
+    return JSONResponse({"detail": "Произошла ошибка. Подробности в разделе Логи."}, status_code=500)
 
 
 class ChatIn(BaseModel):
@@ -46,6 +62,11 @@ class SettingsIn(BaseModel):
     tts_voice: str | None = None
     tts_rate: str | None = None
     search_region: str | None = None
+    setup_done: bool | None = None
+    wake_word: bool | None = None
+    theme: str | None = None
+    tts_enabled: bool | None = None
+    tts_rate: str | None = None
 
 
 class SpeakIn(BaseModel):
@@ -61,11 +82,16 @@ class PcIn(BaseModel):
 @app.get("/api/status")
 def api_status() -> dict[str, Any]:
     settings = load_settings()
+    offline = is_offline()
     return {
         "status": "NOVA online",
         "assistant": settings.assistant_name,
         "user": settings.user_name,
         "ready": True,
+        "version": "1.5.0",
+        "offline": offline,
+        "mode": status_label(offline),
+        "setup_done": settings.setup_done,
     }
 
 
@@ -116,9 +142,13 @@ def reset_memory() -> dict[str, str]:
 async def speak(payload: SpeakIn) -> Response:
     settings = load_settings()
     voice = payload.voice or settings.tts_voice
-    audio, mime = await synthesize(payload.text, voice=voice, rate=settings.tts_rate or "+12%")
+    try:
+        audio, mime = await synthesize(payload.text, voice=voice, rate=settings.tts_rate or "+12%")
+    except Exception:
+        log.exception("tts crashed")
+        audio, mime = b"", "audio/mpeg"
     if not audio:
-        raise HTTPException(status_code=502, detail="Не удалось синтезировать речь")
+        raise HTTPException(status_code=502, detail="Голос сейчас недоступен. Продолжаю текстом.")
     return Response(content=audio, media_type=mime, headers={"Cache-Control": "private, max-age=86400"})
 
 
@@ -187,12 +217,24 @@ def pc_action(payload: PcIn) -> dict[str, Any]:
 
 
 async def _chat(text: str) -> dict[str, Any]:
-    settings = load_settings()
-    result = await respond(settings, memory.history(), text.strip())
-    result["speech"] = speech_preview(result["reply"])
-    memory.add("user", text.strip())
-    memory.add("assistant", result["reply"])
-    return result
+    try:
+        settings = load_settings()
+        result = await respond(settings, memory.history(), text.strip())
+        result["speech"] = speech_preview(result["reply"])
+        memory.add("user", text.strip())
+        memory.add("assistant", result["reply"])
+        return result
+    except Exception:
+        log.exception("chat failed")
+        reply = "Произошла ошибка. Я не смогла выполнить действие. Подробности в разделе Логи."
+        return {
+            "reply": reply,
+            "sources": [],
+            "tools": ["error"],
+            "model": "nova-local",
+            "provider": "local",
+            "speech": speech_preview(reply),
+        }
 
 
 @app.get("/")

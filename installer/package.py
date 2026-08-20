@@ -8,11 +8,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 INCLUDE_FILES = (
     "NOVA.bat",
+    "NOVA.vbs",
     "JARVIS.bat",
     "run.py",
     "requirements.txt",
     ".env.example",
     "README.md",
+    "INSTALL.md",
     "КАК ЗАПУСТИТЬ.txt",
     "start.bat",
     "start.sh",
@@ -24,6 +26,7 @@ INCLUDE_DIRS = (
     "installer",
     "api",
     "data",
+    "docs",
 )
 
 SKIP_PARTS = {
@@ -34,6 +37,14 @@ SKIP_PARTS = {
     "dist",
     ".git",
     "tts_cache",
+    "backups",
+}
+
+SKIP_NAMES = {
+    "nova.db",
+    "settings.json",
+    "permissions.json",
+    "nova.log",
 }
 
 
@@ -52,7 +63,7 @@ def iter_package_files() -> list[Path]:
         if not base.exists():
             continue
         for path in base.rglob("*"):
-            if path.is_file() and not should_skip(path):
+            if path.is_file() and not should_skip(path) and path.name not in SKIP_NAMES:
                 files.append(path)
     return files
 

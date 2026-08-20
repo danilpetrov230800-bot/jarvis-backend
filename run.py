@@ -21,16 +21,25 @@ from dotenv import load_dotenv
 from jarvis.net import find_free_port
 
 load_dotenv(ROOT / ".env")
-LOG = ROOT / "data" / "nova.log"
+
+
+def _log_path() -> Path:
+    try:
+        from jarvis.config import DATA_DIR
+
+        return DATA_DIR / "nova.log"
+    except Exception:
+        return ROOT / "data" / "nova.log"
 
 
 def _setup_logging() -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
+    path = _log_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
         handlers=[
-            logging.FileHandler(LOG, encoding="utf-8"),
+            logging.FileHandler(path, encoding="utf-8"),
             logging.StreamHandler(sys.stdout),
         ],
     )
