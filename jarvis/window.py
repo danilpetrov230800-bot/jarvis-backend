@@ -23,7 +23,7 @@ class NovaBridge:
         except Exception:
             log.debug("on_top not supported")
         if enabled:
-            window.resize(190, 220)
+            window.resize(220, 260)
             try:
                 window.move(40, 40)
             except Exception:
@@ -39,6 +39,10 @@ def wait_and_start(url: str) -> None:
     except Exception:
         log.exception("pywebview is not installed")
         raise
+    try:
+        webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
+    except Exception:
+        log.debug("webview settings not available")
     bridge = NovaBridge()
     webview.create_window(
         "NOVA",

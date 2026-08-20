@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -17,6 +18,8 @@ TRACKING_HOSTS = {
     "doubleclick.net",
 }
 
+log = logging.getLogger(__name__)
+
 
 def _ddgs():
     try:
@@ -26,7 +29,7 @@ def _ddgs():
     return DDGS()
 
 
-def search_web(query: str, max_results: int = 8, region: str = "wt-wt") -> list[dict[str, str]]:
+def search_web(query: str, max_results: int = 8, region: str = "ru-ru") -> list[dict[str, str]]:
     """Search the open web. SafeSearch is off on purpose: no extra query filter."""
     query = query.strip()
     if not query:
@@ -34,30 +37,33 @@ def search_web(query: str, max_results: int = 8, region: str = "wt-wt") -> list[
 
     results: list[dict[str, str]] = []
     seen: set[str] = set()
-    with _ddgs() as client:
-        raw = client.text(
-            query,
-            region=region,
-            safesearch="off",
-            max_results=max(max_results * 2, 8),
-        )
-        for item in raw or []:
-            url = (item.get("href") or item.get("url") or "").strip()
-            if not url or url in seen:
-                continue
-            host = urlparse(url).netloc.lower()
-            if any(bad in host for bad in TRACKING_HOSTS):
-                continue
-            seen.add(url)
-            results.append(
-                {
-                    "title": (item.get("title") or "").strip(),
-                    "url": url,
-                    "snippet": (item.get("body") or item.get("snippet") or "").strip(),
-                }
+    try:
+        with _ddgs() as client:
+            raw = client.text(
+                query,
+                region=region,
+                safesearch="off",
+                max_results=max(max_results * 2, 8),
             )
-            if len(results) >= max_results:
-                break
+            for item in raw or []:
+                url = (item.get("href") or item.get("url") or "").strip()
+                if not url or url in seen:
+                    continue
+                host = urlparse(url).netloc.lower()
+                if any(bad in host for bad in TRACKING_HOSTS):
+                    continue
+                seen.add(url)
+                results.append(
+                    {
+                        "title": (item.get("title") or "").strip(),
+                        "url": url,
+                        "snippet": (item.get("body") or item.get("snippet") or "").strip(),
+                    }
+                )
+                if len(results) >= max_results:
+                    break
+    except Exception:
+        log.exception("web search failed")
     return results
 
 

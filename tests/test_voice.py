@@ -22,3 +22,13 @@ def test_cache_key_is_stable(tmp_path, monkeypatch):
     other = _cache_key("пока", "ru-RU-DmitryNeural", "+12%")
     assert first == second
     assert first != other
+
+
+def test_prune_cache(tmp_path, monkeypatch):
+    from jarvis.voice import _prune_cache
+
+    monkeypatch.setattr("jarvis.voice.CACHE", tmp_path)
+    for i in range(5):
+        (tmp_path / f"{i}.bin").write_bytes(b"x" * 40)
+    _prune_cache(limit=3)
+    assert len(list(tmp_path.glob("*.bin"))) == 3

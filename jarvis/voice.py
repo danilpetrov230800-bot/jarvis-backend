@@ -48,6 +48,17 @@ def _read_cache(path: Path) -> bytes | None:
 def _write_cache(path: Path, data: bytes) -> None:
     CACHE.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
+    _prune_cache()
+
+
+def _prune_cache(limit: int = 80) -> None:
+    files = sorted(CACHE.glob("*.bin"), key=lambda item: item.stat().st_mtime)
+    extra = len(files) - limit
+    for item in files[: max(0, extra)]:
+        try:
+            item.unlink()
+        except OSError:
+            pass
 
 
 def _sapi_wav(text: str) -> bytes:

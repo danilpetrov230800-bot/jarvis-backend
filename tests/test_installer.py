@@ -72,6 +72,8 @@ def test_home_has_nova_ui(client):
     assert "hud" in html
     assert "widgetBtn" in html
     assert "pcDock" in html
+    assert "stopBtn" in html
+    assert "chips" in html
 
 
 def test_run_py_has_no_browser_flag():

@@ -55,9 +55,20 @@
         <button type="button" data-pc="darker" title="Темнее">Темнее</button>
         <button type="button" data-pc="brighter" title="Ярче">Ярче</button>
         <button type="button" data-pc="play" title="Пауза">Пауза</button>
+        <button type="button" data-pc="prev" title="Предыдущий">⏮</button>
+        <button type="button" data-pc="next" title="Следующий">⏭</button>
+        <button type="button" data-pc="screenshot" title="Скриншот">Скрин</button>
+        <button type="button" data-pc="lock" title="Заблокировать">Lock</button>
         <label class="bright-label">Яркость
           <input id="brightRange" type="range" min="10" max="100" value="70" />
         </label>
+      </div>
+      <div class="chips" id="chips">
+        <button type="button" data-chat="погода">Погода</button>
+        <button type="button" data-chat="пробки Москва">Пробки</button>
+        <button type="button" data-chat="курс доллара">Курс</button>
+        <button type="button" data-chat="новости">Новости</button>
+        <button type="button" data-chat="который час">Время</button>
       </div>
       <div id="log" class="log"></div>
       <form id="composer" class="composer">
@@ -65,6 +76,7 @@
           <span class="mic-dot"></span>
         </button>
         <input id="input" type="text" autocomplete="off" placeholder="Скажите «Нова» или напишите сообщение…" />
+        <button id="stopBtn" type="button">Стоп</button>
         <button id="sendBtn" type="submit">Отправить</button>
       </form>
     </section>

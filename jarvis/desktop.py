@@ -86,6 +86,7 @@ SEARCH_OPEN_RE = re.compile(
     re.I,
 )
 NOTE_RE = re.compile(r"^(?:запиши|заметка|заметку|note)\s*[:\-]?\s*(.+)$", re.I)
+COPY_RE = re.compile(r"^(?:скопируй|копируй|copy)\s*[:\-]?\s*(.+)$", re.I)
 CALC_RE = re.compile(r"^(?:посчитай|сколько будет|вычисли)\s+(.+)$", re.I)
 TIMER_RE = re.compile(r"^(?:таймер|напомни(?:ть)? через)\s+(\d+)\s*(сек(?:унд(?:ы|у)?)?|мин(?:ут(?:ы|у)?)?|час(?:а|ов)?)", re.I)
 URL_RE = re.compile(r"https?://[^\s]+", re.I)
@@ -155,13 +156,44 @@ def take_screenshot() -> Path:
 
 def system_info() -> str:
     cpu = platform.processor() or platform.machine()
-    return (
-        f"Система: {platform.system()} {platform.release()}\n"
-        f"Компьютер: {platform.node()}\n"
-        f"Процессор: {cpu}\n"
-        f"Python: {platform.python_version()}\n"
-        f"Папка NOVA: {ROOT}"
-    )
+    target = ROOT.anchor or str(ROOT)
+    try:
+        usage = shutil.disk_usage(target)
+        disk = f"{usage.free / 1024**3:.1f} ГБ свободно"
+    except Exception:
+        disk = "неизвестно"
+    lines = [
+        f"Система: {platform.system()} {platform.release()}",
+        f"Компьютер: {platform.node()}",
+        f"Процессор: {cpu}",
+        f"Python: {platform.python_version()}",
+        f"Диск: {disk}",
+        f"Папка NOVA: {ROOT}",
+    ]
+    battery = _battery_line()
+    if battery:
+        lines.append(battery)
+    return "\n".join(lines)
+
+
+def _battery_line() -> str:
+    if not _win():
+        return ""
+    script = "Get-CimInstance Win32_Battery | Select-Object -ExpandProperty EstimatedChargeRemaining"
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+    except Exception:
+        return ""
+    value = (result.stdout or "").strip().splitlines()
+    if value and value[-1].isdigit():
+        return f"Заряд батареи: {value[-1]}%"
+    return ""
 
 
 def save_note(text: str) -> Path:
@@ -197,6 +229,44 @@ def lock_workstation() -> str:
     return "Блокировка доступна только в Windows."
 
 
+def get_clipboard() -> str:
+    if _win():
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", "Get-Clipboard"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        text = (result.stdout or "").strip()
+        return text or "Буфер обмена пуст."
+    return "Буфер обмена читаю только в Windows."
+
+
+def set_clipboard(text: str) -> str:
+    if _win():
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command", "Set-Clipboard -Value $input"],
+            input=text,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        return "Скопировала в буфер обмена."
+    return "Копирование в буфер доступно в Windows."
+
+
+def _notify_timer(label: str) -> None:
+    if _win():
+        script = (
+            "$w = New-Object -ComObject WScript.Shell; "
+            "$w.Popup('NOVA: timer', 8, 'NOVA', 64)"
+        )
+        subprocess.Popen(["powershell", "-NoProfile", "-Command", script])
+        return
+    print(f"NOVA timer: {label}", flush=True)
+
+
 def handle_intent(text: str) -> ActionResult | None:
     raw = text.strip()
     lowered = raw.lower().strip(" .!?")
@@ -227,8 +297,15 @@ def handle_intent(text: str) -> ActionResult | None:
         save_note(note.group(1))
         return ActionResult(reply="Записала в заметки.", tools=["notes"])
 
-    if "заблок" in lowered and "компьютер" in lowered:
+    if "заблок" in lowered or lowered in {"lock", "заблокируй", "заблокировать"}:
         return ActionResult(reply=lock_workstation(), tools=["lock"])
+
+    if lowered in {"буфер", "буфер обмена", "что в буфере", "clipboard"}:
+        return ActionResult(reply=get_clipboard(), tools=["clipboard"])
+
+    copied = COPY_RE.match(raw)
+    if copied:
+        return ActionResult(reply=set_clipboard(copied.group(1).strip()), tools=["clipboard"])
 
     from jarvis.pc_control import handle_pc_intent
 
@@ -259,8 +336,8 @@ def handle_intent(text: str) -> ActionResult | None:
             seconds = amount * 60
         elif unit.startswith("час"):
             seconds = amount * 3600
-        threading.Timer(seconds, lambda: None).start()
-        return ActionResult(reply=f"Таймер на {amount} {timer.group(2)} поставлен.", tools=["timer"])
+        threading.Timer(seconds, lambda: _notify_timer(f"{amount} {timer.group(2)}")).start()
+        return ActionResult(reply=f"Таймер на {amount} {timer.group(2)} поставлен. Напомню, пока Nova запущена.", tools=["timer"])
 
     opened = _try_open(raw, lowered)
     if opened:
@@ -322,7 +399,8 @@ def help_text() -> str:
         "• найди на ютубе lo-fi\n"
         "• который час / погода Москва / пробки Москва / курс доллара / новости\n"
         "• громче / тише / выключи звук / ярче / темнее / пауза\n"
-        "• переведи hello / вики квантовый компьютер / погугли python\n"
+        "• переведи hello / вики квантовый компьютер / погугли python / мой ip\n"
+        "• таймер 5 минут / скопируй: текст / буфер обмена / заблокируй\n"
         "• сделай скриншот / запиши: купить молоко / посчитай 24*7\n"
         "• открой wikipedia.org\n"
         "А если спросите «что такое кванты» — поищу в интернете."

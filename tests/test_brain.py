@@ -47,5 +47,34 @@ async def test_volume_command(monkeypatch):
     assert "volume" in result["tools"]
 
 
+@pytest.mark.asyncio
+async def test_greeting_with_punctuation():
+    result = await respond(Settings(api_key=""), [], "привет!")
+    assert "Nova" in result["reply"]
+
+
+@pytest.mark.asyncio
+async def test_eurovision_is_not_currency(monkeypatch):
+    monkeypatch.setattr(
+        "jarvis.brain.search_web",
+        lambda query, region="ru-ru": [{"title": "Евровидение", "url": "https://example.com", "snippet": "конкурс"}],
+    )
+    result = await respond(Settings(api_key=""), [], "найди евровидение")
+    assert "currency" not in result["tools"]
+    assert "web_search" in result["tools"]
+
+
+@pytest.mark.asyncio
+async def test_translate_to_english(monkeypatch):
+    async def fake_translate(phrase, target="ru"):
+        assert target == "en"
+        return {"reply": "hello", "title": "Перевод", "url": "https://translate.google.com"}
+
+    monkeypatch.setattr("jarvis.services.translate_text", fake_translate)
+    result = await respond(Settings(api_key=""), [], "переведи привет на английский")
+    assert result["reply"] == "hello"
+    assert "translate" in result["tools"]
+
+
 def test_summarize_search_empty():
     assert "ничего не нашла" in summarize_search("zzz", [])

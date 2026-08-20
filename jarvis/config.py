@@ -22,7 +22,7 @@ class Settings(BaseModel):
     language: str = "ru"
     tts_voice: str = "ru-RU-DmitryNeural"
     tts_rate: str = "+12%"
-    search_region: str = "wt-wt"
+    search_region: str = "ru-ru"
     host: str = "127.0.0.1"
     port: int = 8080
     open_browser: bool = True

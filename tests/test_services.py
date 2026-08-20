@@ -1,6 +1,7 @@
 import pytest
 
 from jarvis import services
+from jarvis.services import normalize_place
 
 
 class FakeResp:
@@ -92,3 +93,9 @@ async def test_currency(monkeypatch):
     data = await services.get_currency()
     assert "90.12" in data["reply"]
     assert "ЦБ" in data["title"]
+
+
+def test_city_aliases():
+    assert normalize_place("спб") == "Санкт-Петербург"
+    assert normalize_place("мск") == "Москва"
+    assert normalize_place("") == "Москва"

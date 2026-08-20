@@ -62,3 +62,28 @@ def test_help_text_lists_commands():
     text = help_text()
     assert "калькулятор" in text
     assert "скриншот" in text
+
+
+def test_lock_without_computer_word(monkeypatch):
+    monkeypatch.setattr("jarvis.desktop.lock_workstation", lambda: "locked")
+    result = handle_intent("заблокируй")
+    assert result is not None
+    assert "lock" in result.tools
+
+
+def test_clipboard_copy(monkeypatch):
+    captured = []
+    monkeypatch.setattr("jarvis.desktop.set_clipboard", lambda text: captured.append(text) or "ok")
+    result = handle_intent("скопируй: купить хлеб")
+    assert result is not None
+    assert captured == ["купить хлеб"]
+
+
+def test_timer_schedules_notify(monkeypatch):
+    scheduled = []
+    monkeypatch.setattr("jarvis.desktop.threading.Timer", lambda seconds, fn: type("T", (), {"start": lambda self: scheduled.append(seconds) or fn()})())
+    monkeypatch.setattr("jarvis.desktop._notify_timer", lambda label: None)
+    result = handle_intent("таймер 5 секунд")
+    assert result is not None
+    assert "timer" in result.tools
+    assert scheduled == [5]

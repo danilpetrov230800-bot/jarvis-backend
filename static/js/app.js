@@ -13,8 +13,19 @@ const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let listening = false;
 let speaking = false;
+let busy = false;
 let settings = {};
 let audioQueue = Promise.resolve();
+let currentAudio = null;
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function startStars() {
   const canvas = document.getElementById("stars");
@@ -79,9 +90,17 @@ function addMessage(role, text, sources = []) {
     src.className = "sources";
     src.innerHTML = sources
       .slice(0, 5)
-      .map((s) => `<a href="${s.url}" target="_blank" rel="noreferrer">${s.title || s.url}</a>`)
+      .map((s) => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer">${escapeHtml(s.title || s.url)}</a>`)
       .join(" · ");
     wrap.appendChild(src);
+  }
+  if (role === "assistant") {
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "copy-btn";
+    copy.textContent = "копировать";
+    copy.addEventListener("click", () => navigator.clipboard.writeText(text).catch(() => {}));
+    wrap.appendChild(copy);
   }
   logEl.appendChild(wrap);
   logEl.scrollTop = logEl.scrollHeight;
@@ -102,8 +121,10 @@ async function speak(text) {
     const url = URL.createObjectURL(blob);
     await new Promise((resolve) => {
       const audio = new Audio(url);
+      currentAudio = audio;
       audio.onended = () => {
         URL.revokeObjectURL(url);
+        if (currentAudio === audio) currentAudio = null;
         resolve();
       };
       audio.onerror = resolve;
@@ -119,13 +140,26 @@ async function speak(text) {
     });
   } finally {
     speaking = false;
+    currentAudio = null;
     setState(listening ? "listening" : "idle");
   }
 }
 
+function stopSpeak() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  speaking = false;
+  audioQueue = Promise.resolve();
+  setState(listening ? "listening" : "idle");
+}
+
 async function sendText(text, voiceReply = true) {
   const value = (text || "").trim();
-  if (!value) return;
+  if (!value || busy) return;
+  busy = true;
   addMessage("user", value);
   inputEl.value = "";
   setState("thinking");
@@ -146,6 +180,8 @@ async function sendText(text, voiceReply = true) {
   } catch (err) {
     addMessage("assistant", String(err.message || err));
     setState("idle");
+  } finally {
+    busy = false;
   }
 }
 
@@ -180,7 +216,7 @@ function setupMic() {
       else interim += piece;
     }
     heard.textContent = interim || finalText;
-    if (finalText && !speaking) {
+    if (finalText && !speaking && !busy) {
       const command = maybeWake(finalText);
       if (command) sendText(command, true);
     }
@@ -273,7 +309,7 @@ async function boot() {
     document.getElementById("assistantName").textContent = settings.assistant_name || "NOVA";
     addMessage(
       "assistant",
-      "Я Nova. Работаю как приложение на этом компьютере. Скажите: «открой YouTube», «громче», «пробки Москва», «погода», «курс доллара». Кнопка «Виджет» сворачивает окно.",
+      "Я Nova. Работаю как приложение на этом компьютере. Скажите: «открой YouTube», «громче», «пробки Москва», «погода», «курс доллара», «мой ip». Кнопка «Виджет» сворачивает окно, «Стоп» прерывает голос.",
     );
     setState("idle", "онлайн");
   } catch {
@@ -336,4 +372,11 @@ document.getElementById("brightRange").addEventListener("input", (event) => {
   const value = Number(event.target.value);
   clearTimeout(brightTimer);
   brightTimer = setTimeout(() => sendPc("brightness", value), 180);
+});
+
+document.getElementById("stopBtn").addEventListener("click", () => stopSpeak());
+document.getElementById("chips").addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-chat]");
+  if (!btn) return;
+  sendText(btn.getAttribute("data-chat"), true);
 });

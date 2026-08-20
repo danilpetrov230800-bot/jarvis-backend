@@ -237,7 +237,7 @@ button:hover {
 
 .composer {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: 10px;
   padding: 16px;
   border-top: 1px solid var(--line);
@@ -379,6 +379,29 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 }
 .bright-label input { width: 110px; }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+.chips button {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.copy-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+#stopBtn { text-transform: none; letter-spacing: 0.04em; }
+
+body.widget-mode .chips,
+body.widget-mode #stopBtn,
 body.widget-mode .aurora,
 body.widget-mode #stars,
 body.widget-mode .vignette,

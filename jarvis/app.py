@@ -17,7 +17,7 @@ from jarvis.voice import list_russian_voices, speech_preview, synthesize
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
 
-app = FastAPI(title="NOVA", version="1.3.0")
+app = FastAPI(title="NOVA", version="1.4.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
