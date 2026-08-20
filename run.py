@@ -25,8 +25,10 @@ import time
 import urllib.request
 import webbrowser
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-os.chdir(ROOT)
+FROZEN = getattr(sys, "frozen", False)
+ROOT = os.path.dirname(sys.executable) if FROZEN else os.path.dirname(os.path.abspath(__file__))
+if not FROZEN:
+    os.chdir(ROOT)
 
 HOST = os.environ.get("NOVA_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NOVA_PORT", "8000"))
@@ -49,6 +51,8 @@ def _http_ok(url: str, timeout: float = 1.5) -> bool:
 
 # --------------------------------------------------------------------------
 def install_deps() -> None:
+    if FROZEN:
+        return  # в установленном приложении зависимости уже внутри
     log("Проверяю и ставлю зависимости…")
     reqs = os.path.join(ROOT, "requirements.txt")
     attempts = [
@@ -149,7 +153,9 @@ def main() -> None:
 
     install_deps()
 
-    if ensure_ollama():
+    if os.environ.get("NOVA_SKIP_OLLAMA") == "1":
+        log("Локальный ИИ пропущен (NOVA_SKIP_OLLAMA=1) — демо-режим.")
+    elif ensure_ollama():
         if start_ollama():
             pull_model_background()
         else:
@@ -158,7 +164,8 @@ def main() -> None:
         log("Ollama пока недоступна — запускаю в демо-режиме (подключится позже).")
 
     log(f"Открываю Nova: http://{HOST}:{PORT}  (для выхода — Ctrl+C)")
-    open_browser_when_ready()
+    if os.environ.get("NOVA_NO_BROWSER") != "1":
+        open_browser_when_ready()
 
     import uvicorn
     from api.index import app

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Iterator, List, Optional
 
@@ -20,7 +21,11 @@ from . import assistant, llm
 from . import system_control as sysctl
 from . import tools
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# В упакованном виде (PyInstaller) ресурсы лежат в sys._MEIPASS.
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="Nova", description="Персональный ИИ-ассистент")
