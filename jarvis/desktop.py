@@ -10,11 +10,14 @@ import threading
 import webbrowser
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote, quote_plus
 from zoneinfo import ZoneInfo
 
-from jarvis.config import DATA_DIR, ROOT
+import psutil
+
+from jarvis.config import DATA_DIR
 from jarvis.permissions import require
 
 NOTES_PATH = DATA_DIR / "notes.txt"
@@ -117,11 +120,55 @@ def open_url(url: str) -> str:
     return url
 
 
+@lru_cache(maxsize=1)
+def installed_app_index() -> dict[str, str]:
+    if not _win():
+        return {}
+    index: dict[str, str] = {}
+    start_roots = [
+        Path(os.getenv("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
+        Path(os.getenv("PROGRAMDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
+    ]
+    for root in start_roots:
+        if not root.is_dir():
+            continue
+        for item in root.rglob("*"):
+            if item.suffix.lower() in {".lnk", ".exe", ".url"}:
+                index.setdefault(item.stem.casefold(), str(item))
+    try:
+        import winreg
+
+        registry_roots = (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE)
+        for registry_root in registry_roots:
+            try:
+                with winreg.OpenKey(registry_root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths") as key:
+                    for position in range(winreg.QueryInfoKey(key)[0]):
+                        name = winreg.EnumKey(key, position)
+                        with winreg.OpenKey(key, name) as app_key:
+                            value = str(winreg.QueryValue(app_key, None)).strip('"')
+                            if Path(value).is_file():
+                                index.setdefault(Path(name).stem.casefold(), value)
+            except OSError:
+                continue
+    except ImportError:
+        pass
+    return index
+
+
 def open_app(name: str) -> str | None:
     require("RUN_APPLICATIONS")
     key = name.strip().lower()
-    candidates = APPS.get(key, [name])
+    discovered = installed_app_index()
+    matched = discovered.get(key)
+    if not matched:
+        matched = next((path for title, path in discovered.items() if key in title or title in key), None)
+    candidates = APPS.get(key, [matched or name])
     for item in candidates:
+        if not item:
+            continue
+        if _win() and Path(item).suffix.lower() in {".lnk", ".url"} and Path(item).exists():
+            os.startfile(item)  # type: ignore[attr-defined]
+            return item
         if item.endswith(":") or item.startswith("ms-"):
             if _win():
                 os.startfile(item)  # type: ignore[attr-defined]
@@ -160,7 +207,7 @@ def take_screenshot() -> Path:
 
 def system_info() -> str:
     cpu = platform.processor() or platform.machine()
-    target = ROOT.anchor or str(ROOT)
+    target = DATA_DIR.anchor or str(Path.home())
     try:
         usage = shutil.disk_usage(target)
         disk = f"{usage.free / 1024**3:.1f} ГБ свободно"
@@ -170,9 +217,10 @@ def system_info() -> str:
         f"Система: {platform.system()} {platform.release()}",
         f"Компьютер: {platform.node()}",
         f"Процессор: {cpu}",
-        f"Python: {platform.python_version()}",
+        f"CPU: {psutil.cpu_percent(interval=0.15):.0f}%",
+        f"RAM: {psutil.virtual_memory().percent:.0f}%",
         f"Диск: {disk}",
-        f"Папка NOVA: {ROOT}",
+        f"Uptime: {(datetime.now().timestamp() - psutil.boot_time()) / 3600:.1f} ч",
     ]
     battery = _battery_line()
     if battery:

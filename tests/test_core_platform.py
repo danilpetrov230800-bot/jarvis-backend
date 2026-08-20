@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis import config, core, permissions, secrets, storage
+from jarvis import agents, config, core, permissions, secrets, storage
+from jarvis.config import Settings
+from jarvis.skills import execute_skill, matching_skill
 
 
 @pytest.fixture()
@@ -100,3 +102,36 @@ def test_stress_one_hundred_memory_records(isolated_data):
     for index in range(120):
         core.save_memory(f"record {index}", importance=index % 5 + 1)
     assert len(core.list_records("memories")) == 120
+
+
+def test_skill_matches_and_executes_local_action(isolated_data, monkeypatch):
+    core.save_skill({"name": "Время", "trigger": "режим теста", "actions": [{"type": "command", "value": "который час"}]})
+    skill = matching_skill("режим теста")
+    assert skill is not None
+    result = execute_skill(skill)
+    assert "datetime" in result.tools
+
+
+@pytest.mark.asyncio
+async def test_agent_plans_retries_verifies_and_completes(isolated_data):
+    calls = 0
+
+    async def execute(step):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("transient")
+        return {"reply": f"done: {step}", "tools": ["test"]}
+
+    result = await agents.run_agent(
+        {"name": "Testing Agent", "enabled": True},
+        "первый шаг; второй шаг",
+        Settings(),
+        execute,
+        max_steps=3,
+        timeout=2,
+        retry_limit=1,
+    )
+    assert result["completed"] is True
+    assert any(event["status"] == "retry" for event in result["events"])
+    assert len([event for event in result["events"] if event["status"] == "verified"]) == 2

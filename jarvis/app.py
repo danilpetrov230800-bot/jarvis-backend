@@ -106,6 +106,13 @@ class FileToolIn(BaseModel):
     confirmed: bool = False
 
 
+class AgentRunIn(BaseModel):
+    goal: str = Field(min_length=1, max_length=5000)
+    max_steps: int = Field(default=8, ge=1, le=20)
+    timeout: float = Field(default=120, ge=1, le=600)
+    retry_limit: int = Field(default=1, ge=0, le=3)
+
+
 @app.get("/api/status")
 def api_status() -> dict[str, Any]:
     settings = load_settings()
@@ -169,6 +176,31 @@ def add_skill(payload: dict[str, Any]) -> dict[str, Any]:
 @app.post("/api/agents")
 def add_agent(payload: dict[str, Any]) -> dict[str, Any]:
     return save_agent(payload)
+
+
+@app.post("/api/agents/{agent_id}/run")
+async def execute_agent(agent_id: int, payload: AgentRunIn) -> dict[str, Any]:
+    from jarvis.agents import run_agent
+
+    agent = next((item for item in list_records("agents") if item["id"] == agent_id), None)
+    if not agent:
+        raise HTTPException(404, "Агент не найден")
+    for permission_name in agent.get("permissions", []):
+        require(str(permission_name))
+    settings = load_settings()
+
+    async def execute(step: str) -> dict[str, Any]:
+        return await respond(settings, memory.history(), step)
+
+    return await run_agent(
+        agent,
+        payload.goal,
+        settings,
+        execute,
+        max_steps=payload.max_steps,
+        timeout=payload.timeout,
+        retry_limit=payload.retry_limit,
+    )
 
 
 @app.post("/api/tasks")

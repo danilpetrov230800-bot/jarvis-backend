@@ -11,3 +11,4 @@ pydantic>=2.9.0
 python-dotenv>=1.0.1
 proxy_tools==0.1.0
 pywebview>=5.0.0
+psutil>=7.2.2

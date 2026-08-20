@@ -10,6 +10,7 @@ from jarvis.llm import LLMError, chat_once
 from jarvis.pc_control import handle_pc_intent
 from jarvis.prompts import search_needed
 from jarvis.search import serialize_sources, search_web
+from jarvis.skills import execute_skill, matching_skill
 from jarvis import services
 
 WEATHER_RE = re.compile(r"погод[аеуы]?\s*(?:в\s+)?(.+)?$", re.I)
@@ -75,6 +76,10 @@ async def respond(settings: Settings, history: list[dict[str, Any]], text: str) 
     lowered = _clean(text)
     if lowered in GREETINGS:
         return _pack("Привет. Я Nova. Могу открыть сайт, прибавить звук, сказать пробки и погоду — без ключа.")
+
+    skill = matching_skill(text)
+    if skill:
+        return _from_action(execute_skill(skill))
 
     pc = handle_pc_intent(lowered)
     if pc:

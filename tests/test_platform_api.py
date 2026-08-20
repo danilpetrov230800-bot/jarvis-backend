@@ -55,3 +55,11 @@ def test_unknown_file_operation_is_safe_error(client, tmp_path, monkeypatch):
     response = client.post("/api/tools/files", json={"operation": "shell", "path": "."})
     assert response.status_code == 400
     assert "Неизвестная" in response.json()["detail"]
+
+
+def test_stress_one_hundred_offline_messages(client, tmp_path, monkeypatch):
+    _isolate(tmp_path, monkeypatch)
+    for _ in range(100):
+        response = client.post("/api/chat", json={"text": "привет"})
+        assert response.status_code == 200
+        assert response.json()["provider"] == "local"
