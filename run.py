@@ -97,7 +97,7 @@ def main() -> None:
     server_thread = None
     if use_native:
         server_thread = threading.Thread(
-            target=lambda: uvicorn.run(app, host=host, port=port, log_level="warning"),
+            target=lambda: uvicorn.run(app, host=host, port=port, log_level="warning", log_config=None),
             daemon=True,
         )
         server_thread.start()
@@ -120,7 +120,7 @@ def main() -> None:
     if server_thread is not None:
         server_thread.join()
         return
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info", log_config=None)
 
 
 if __name__ == "__main__":
