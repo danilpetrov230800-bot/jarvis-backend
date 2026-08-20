@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOVA</title>
+  <link rel="stylesheet" href="/static/css/app.css" />
+  <link rel="icon" href="/static/icons/nova.svg" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="orb" id="orb"></div>
+        <div>
+          <div class="brand-name">NOVA</div>
+          <div class="brand-status" id="statusLine">Запуск…</div>
+        </div>
+      </div>
+      <nav id="nav">
+        <button data-view="home" class="active">Главная</button>
+        <button data-view="chat">Чат</button>
+        <button data-view="agents">Агенты</button>
+        <button data-view="skills">Навыки</button>
+        <button data-view="memory">Память</button>
+        <button data-view="tools">Инструменты</button>
+        <button data-view="tasks">Задачи</button>
+        <button data-view="research">Исследование</button>
+        <button data-view="settings">Настройки</button>
+        <button data-view="logs">Журнал</button>
+      </nav>
+      <div class="sidebar-foot">
+        <span id="offlineBadge" class="badge hidden">Offline mode</span>
+        <button id="diagBtn" class="ghost">Проверить NOVA</button>
+      </div>
+    </aside>
+    <main>
+      <header class="top">
+        <div>
+          <h1 id="viewTitle">NOVA</h1>
+          <p id="taskLine" class="muted">Готова к работе</p>
+        </div>
+        <div class="top-actions">
+          <button id="micBtn" class="icon-btn" title="Микрофон">🎤</button>
+          <button id="wakeBtn" class="ghost" title="Wake word">Нова</button>
+          <button id="agentModeBtn" class="ghost">Агент</button>
+        </div>
+      </header>
+      <section id="views"></section>
+    </main>
+  </div>
+  <div id="modal" class="modal hidden"></div>
+  <audio id="tts"></audio>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

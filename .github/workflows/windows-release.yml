@@ -1,0 +1,128 @@
+name: windows-release
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pytest -q
+
+  windows-installer:
+    runs-on: windows-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build icon
+        run: python scripts/make_icon.py
+
+      - name: PyInstaller
+        run: >
+          pyinstaller --noconfirm --onedir --windowed --name NOVA
+          --icon packaging/nova.ico
+          --add-data "static;static"
+          --hidden-import nova
+          --hidden-import nova.app
+          --hidden-import nova.kernel
+          --collect-all fastapi
+          --collect-all starlette
+          --collect-all uvicorn
+          --collect-all pydantic
+          --collect-all pydantic_core
+          --collect-all anyio
+          --collect-all edge_tts
+          --collect-all ddgs
+          --hidden-import psutil
+          --hidden-import PIL
+          --hidden-import webview
+          run.py
+
+      - name: Smoke test packaged app
+        shell: pwsh
+        env:
+          NOVA_NO_WINDOW: "1"
+          NOVA_DATA_DIR: "${{ runner.temp }}/nova-data"
+        run: |
+          $exe = "dist\NOVA\NOVA.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--no-window","--port","8765" -PassThru
+          $ok = $false
+          foreach ($i in 1..40) {
+            try {
+              $r = Invoke-WebRequest "http://127.0.0.1:8765/health" -UseBasicParsing -TimeoutSec 2
+              if ($r.StatusCode -eq 200) { $ok = $true; break }
+            } catch { Start-Sleep -Seconds 2 }
+          }
+          if (-not $ok) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "NOVA.exe did not start" }
+          $chat = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8765/api/chat" -ContentType "application/json" -Body '{"text":"помощь"}'
+          if (-not $chat.reply) { throw "chat failed" }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build NOVA-Setup.exe
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\nova.iss'
+
+      - name: Silent install, launch, uninstall
+        shell: pwsh
+        run: |
+          $setup = "release\NOVA-Setup.exe"
+          if (-not (Test-Path $setup)) { throw "installer missing" }
+          $dir = Join-Path $env:TEMP "NOVA-clean-install"
+          Start-Process -FilePath $setup -ArgumentList "/VERYSILENT","/NORESTART","/DIR=$dir" -Wait
+          if (-not (Test-Path "$dir\NOVA.exe")) { throw "NOVA.exe not installed" }
+          $p = Start-Process -FilePath "$dir\NOVA.exe" -ArgumentList "--no-window","--port","8777" -PassThru
+          $env:NOVA_NO_WINDOW = "1"
+          $ok = $false
+          foreach ($i in 1..40) {
+            try {
+              $r = Invoke-WebRequest "http://127.0.0.1:8777/health" -UseBasicParsing -TimeoutSec 2
+              if ($r.StatusCode -eq 200) { $ok = $true; break }
+            } catch { Start-Sleep -Seconds 2 }
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "installed NOVA did not start" }
+          $un = Get-ChildItem "$dir\unins*.exe" | Select-Object -First 1
+          if ($un) { Start-Process -FilePath $un.FullName -ArgumentList "/VERYSILENT","/NORESTART" -Wait }
+
+      - name: Portable zip and checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          if (Test-Path release\NOVA-Portable.zip) { Remove-Item release\NOVA-Portable.zip }
+          Compress-Archive -Path dist\NOVA\* -DestinationPath release\NOVA-Portable.zip
+          Get-FileHash release\NOVA-Setup.exe -Algorithm SHA256 | ForEach-Object { "NOVA-Setup.exe  $($_.Hash)" } | Set-Content release\SHA256.txt
+          Get-FileHash release\NOVA-Portable.zip -Algorithm SHA256 | ForEach-Object { "NOVA-Portable.zip $($_.Hash)" } | Add-Content release\SHA256.txt
+          Copy-Item RELEASE_NOTES.md release\RELEASE_NOTES.md -ErrorAction SilentlyContinue
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOVA-Windows
+          path: |
+            release/NOVA-Setup.exe
+            release/NOVA-Portable.zip
+            release/SHA256.txt
+            release/RELEASE_NOTES.md
+          if-no-files-found: error
