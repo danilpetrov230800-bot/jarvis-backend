@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOVA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="aurora" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">N</span>
+      <div>
+        <strong id="assistantName">NOVA</strong>
+        <small id="statusLine">ожидание</small>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="widgetBtn" type="button">Виджет</button>
+      <button id="resetBtn" type="button">Новый чат</button>
+      <button id="settingsBtn" type="button">Настройки</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="hud-col">
+      <div id="hud" class="hud idle" aria-hidden="true">
+        <div class="halo"></div>
+        <div class="orbit o1"></div>
+        <div class="orbit o2"></div>
+        <div class="orbit o3"></div>
+        <div class="spark s1"></div>
+        <div class="spark s2"></div>
+        <div class="core">
+          <div class="core-glow"></div>
+          <span id="hudState">NOVA</span>
+        </div>
+      </div>
+      <p id="heard" class="heard"></p>
+    </section>
+
+    <section class="chat-col">
+      <div class="pc-dock" id="pcDock">
+        <span class="pc-label">ПК</span>
+        <button type="button" data-pc="volume_down" title="Тише">−</button>
+        <button type="button" data-pc="mute" title="Без звука">Mute</button>
+        <button type="button" data-pc="volume_up" title="Громче">+</button>
+        <button type="button" data-pc="darker" title="Темнее">Темнее</button>
+        <button type="button" data-pc="brighter" title="Ярче">Ярче</button>
+        <button type="button" data-pc="play" title="Пауза">Пауза</button>
+        <button type="button" data-pc="prev" title="Предыдущий">⏮</button>
+        <button type="button" data-pc="next" title="Следующий">⏭</button>
+        <button type="button" data-pc="screenshot" title="Скриншот">Скрин</button>
+        <button type="button" data-pc="lock" title="Заблокировать">Lock</button>
+        <label class="bright-label">Яркость
+          <input id="brightRange" type="range" min="10" max="100" value="70" />
+        </label>
+      </div>
+      <div class="chips" id="chips">
+        <button type="button" data-chat="погода">Погода</button>
+        <button type="button" data-chat="пробки Москва">Пробки</button>
+        <button type="button" data-chat="курс доллара">Курс</button>
+        <button type="button" data-chat="новости">Новости</button>
+        <button type="button" data-chat="который час">Время</button>
+      </div>
+      <div id="log" class="log"></div>
+      <form id="composer" class="composer">
+        <button id="micBtn" type="button" aria-label="Голос">
+          <span class="mic-dot"></span>
+        </button>
+        <input id="input" type="text" autocomplete="off" placeholder="Скажите «Нова» или напишите сообщение…" />
+        <button id="stopBtn" type="button">Стоп</button>
+        <button id="sendBtn" type="submit">Отправить</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="setup" class="setup hidden" hidden>
+    <div class="setup-card">
+      <div class="setup-mark">N</div>
+      <h2>NOVA</h2>
+      <p>Вставьте ключ — и помощник заработает. Бесплатно: <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">console.groq.com/keys</a></p>
+      <label>Ваше имя
+        <input id="setupName" value="Данила" />
+      </label>
+      <label>API-ключ
+        <input id="setupKey" type="password" placeholder="gsk_... или sk-or-..." autocomplete="off" />
+      </label>
+      <p class="hint">Groq: gsk_. OpenRouter: sk-or-. OpenAI: sk-.</p>
+      <button id="setupSave" type="button">Войти в NOVA</button>
+      <p id="setupError" class="error" hidden></p>
+    </div>
+  </div>
+
+  <dialog id="settings">
+    <form id="settingsForm" method="dialog">
+      <h2>Настройки</h2>
+      <p class="hint">Ключ хранится только на этом компьютере.</p>
+      <label>Провайдер
+        <select name="provider">
+          <option value="auto">Авто</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="openai">OpenAI</option>
+          <option value="groq">Groq</option>
+          <option value="ollama">Ollama (локально)</option>
+        </select>
+      </label>
+      <label>Модель
+        <input name="model" placeholder="например llama-3.3-70b-versatile" />
+      </label>
+      <label>Base URL
+        <input name="base_url" placeholder="оставьте пустым для авто" />
+      </label>
+      <label>API-ключ
+        <input name="api_key" type="password" placeholder="не меняется, если пусто" />
+      </label>
+      <label>Ваше имя
+        <input name="user_name" />
+      </label>
+      <label>Голос
+        <select name="tts_voice"></select>
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="closeSettings">Закрыть</button>
+        <button value="save" id="saveSettings">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
