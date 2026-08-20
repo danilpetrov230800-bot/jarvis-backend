@@ -35,6 +35,7 @@ def test_pc_endpoints(client, monkeypatch):
     listing = client.get("/api/pc")
     assert listing.status_code == 200
     assert "volume_up" in listing.json()["actions"]
+    monkeypatch.setattr("jarvis.app.require", lambda permission: None)
     monkeypatch.setattr("jarvis.pc_control.volume_up", lambda: "Громкость выше.")
     ok = client.post("/api/pc", json={"action": "volume_up"})
     assert ok.status_code == 200

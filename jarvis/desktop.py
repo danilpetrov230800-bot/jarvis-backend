@@ -15,6 +15,7 @@ from urllib.parse import quote, quote_plus
 from zoneinfo import ZoneInfo
 
 from jarvis.config import DATA_DIR, ROOT
+from jarvis.permissions import require
 
 NOTES_PATH = DATA_DIR / "notes.txt"
 
@@ -105,6 +106,7 @@ def _win() -> bool:
 
 
 def open_url(url: str) -> str:
+    require("NETWORK")
     url = url.strip()
     if not url.startswith("http"):
         url = "https://" + url
@@ -116,6 +118,7 @@ def open_url(url: str) -> str:
 
 
 def open_app(name: str) -> str | None:
+    require("RUN_APPLICATIONS")
     key = name.strip().lower()
     candidates = APPS.get(key, [name])
     for item in candidates:
@@ -136,6 +139,7 @@ def open_app(name: str) -> str | None:
 
 
 def take_screenshot() -> Path:
+    require("SCREEN_CONTROL")
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     path = DATA_DIR / f"screenshot-{datetime.now().strftime('%Y%m%d-%H%M%S')}.png"
     if _win():
@@ -223,6 +227,7 @@ def safe_eval_math(expr: str) -> str:
 
 
 def lock_workstation() -> str:
+    require("SYSTEM_SETTINGS")
     if _win():
         subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
         return "Блокирую компьютер."
@@ -230,6 +235,7 @@ def lock_workstation() -> str:
 
 
 def get_clipboard() -> str:
+    require("READ_FILES")
     if _win():
         result = subprocess.run(
             ["powershell", "-NoProfile", "-Command", "Get-Clipboard"],
@@ -244,6 +250,7 @@ def get_clipboard() -> str:
 
 
 def set_clipboard(text: str) -> str:
+    require("WRITE_FILES")
     if _win():
         subprocess.run(
             ["powershell", "-NoProfile", "-Command", "Set-Clipboard -Value $input"],

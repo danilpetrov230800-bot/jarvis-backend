@@ -1,4 +1,4 @@
-name: windows-package
+name: NOVA Windows Production
 
 on:
   push:
@@ -19,17 +19,85 @@ jobs:
           python -m pip install -r requirements-dev.txt
           python -m pytest -q
 
-  windows-zip:
+  windows-production:
+    needs: tests
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build portable ZIP with Python inside
-        shell: powershell
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install build dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: Build self-contained application
+        shell: pwsh
+        run: >
+          pyinstaller --noconfirm --clean --windowed --onedir --name NOVA
+          --icon packaging/nova.ico
+          --add-data "static;static"
+          --collect-all fastapi --collect-all starlette --collect-all uvicorn
+          --collect-all pydantic --collect-all pydantic_core --collect-all edge_tts
+          --collect-all webview --hidden-import psutil run.py
+      - name: Smoke test packaged application
+        shell: pwsh
+        env:
+          NOVA_NO_BROWSER: "1"
+          NOVA_PORT: "8080"
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File installer\build-portable.ps1
-      - name: Upload NOVA-windows.zip
+          $p = Start-Process -FilePath "dist\NOVA\NOVA.exe" -ArgumentList "--no-browser" -PassThru
+          $ok = $false
+          foreach ($i in 1..40) {
+            try {
+              $r = Invoke-RestMethod "http://127.0.0.1:8080/api/status" -TimeoutSec 2
+              if ($r.ready) { $ok = $true; break }
+            } catch { Start-Sleep -Milliseconds 500 }
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "Packaged NOVA failed health check" }
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "packaging\nova.iss"
+      - name: Clean install, launch, and uninstall
+        shell: pwsh
+        run: |
+          $installer = (Resolve-Path "release\NOVA-Setup.exe").Path
+          & $installer /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          if ($LASTEXITCODE -ne 0) { throw "Installer failed: $LASTEXITCODE" }
+          $exe = Join-Path $env:LOCALAPPDATA "Programs\NOVA\NOVA.exe"
+          if (-not (Test-Path $exe)) { throw "Installed executable is missing" }
+          $p = Start-Process $exe -ArgumentList "--no-browser" -PassThru
+          $ok = $false
+          foreach ($i in 1..40) {
+            try {
+              $r = Invoke-RestMethod "http://127.0.0.1:8080/api/diagnostics" -TimeoutSec 2
+              if ($r.status -ne "FAIL") { $ok = $true; break }
+            } catch { Start-Sleep -Milliseconds 500 }
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "Installed NOVA failed diagnostics" }
+          $uninstaller = Join-Path $env:LOCALAPPDATA "Programs\NOVA\unins000.exe"
+          & $uninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          if (Test-Path $exe) { throw "Uninstall left the application executable behind" }
+      - name: Create release files
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\NOVA\*" -DestinationPath "release\NOVA-Portable.zip" -Force
+          @"
+          # NOVA 2.0.0
+
+          Windows 10/11 x64 production release. Includes the Python runtime and all required application libraries.
+          Local commands work without an API key. User data is stored separately under LocalAppData and survives upgrades.
+          "@ | Set-Content "release\RELEASE_NOTES.md" -Encoding UTF8
+          $lines = Get-ChildItem release\NOVA-Setup.exe,release\NOVA-Portable.zip | ForEach-Object {
+            "$(Get-FileHash $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $($_.Name)"
+          }
+          $lines | Set-Content "release\SHA256.txt" -Encoding ASCII
+      - name: Upload production release
         uses: actions/upload-artifact@v4
         with:
-          name: NOVA-windows
-          path: dist/NOVA-windows.zip
+          name: NOVA-Windows-Production
+          path: release/
           if-no-files-found: error

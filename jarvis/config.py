@@ -2,13 +2,25 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data"
+ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+
+
+def _user_data_dir() -> Path:
+    override = os.getenv("NOVA_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    if sys.platform == "win32":
+        return Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "NOVA"
+    return Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "nova"
+
+
+DATA_DIR = _user_data_dir()
 SETTINGS_PATH = DATA_DIR / "settings.json"
 
 
@@ -17,7 +29,7 @@ class Settings(BaseModel):
     api_key: str = ""
     base_url: str = ""
     model: str = ""
-    user_name: str = "Данила"
+    user_name: str = "Пользователь"
     assistant_name: str = "Nova"
     language: str = "ru"
     tts_voice: str = "ru-RU-DmitryNeural"
@@ -25,7 +37,7 @@ class Settings(BaseModel):
     search_region: str = "ru-ru"
     host: str = "127.0.0.1"
     port: int = 8080
-    open_browser: bool = True
+    open_browser: bool = False
     max_history: int = 24
 
     extra: dict[str, Any] = Field(default_factory=dict)
@@ -51,6 +63,11 @@ def _first_env(*names: str) -> str:
 def load_settings() -> Settings:
     file_data = {k: v for k, v in _read_json(SETTINGS_PATH).items() if v not in ("", None)}
     settings = Settings.model_validate(file_data)
+    from jarvis.secrets import load_api_key
+
+    stored_key = load_api_key()
+    if stored_key:
+        settings.api_key = stored_key
 
     settings.user_name = os.getenv("NOVA_USER_NAME", os.getenv("JARVIS_USER_NAME", settings.user_name))
     settings.assistant_name = os.getenv("NOVA_ASSISTANT_NAME", os.getenv("JARVIS_ASSISTANT_NAME", settings.assistant_name))
@@ -74,8 +91,11 @@ def load_settings() -> Settings:
 
 
 def save_settings(settings: Settings) -> None:
+    from jarvis.secrets import save_api_key
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    payload = settings.model_dump(exclude={"extra"})
+    save_api_key(settings.api_key)
+    payload = settings.model_dump(exclude={"extra", "api_key"})
     SETTINGS_PATH.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",

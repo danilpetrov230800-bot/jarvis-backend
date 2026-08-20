@@ -17,6 +17,8 @@ let busy = false;
 let settings = {};
 let audioQueue = Promise.resolve();
 let currentAudio = null;
+let wakeArmedUntil = 0;
+let ignoreVoiceUntil = 0;
 
 function escapeHtml(value) {
   return String(value)
@@ -140,6 +142,7 @@ async function speak(text) {
     });
   } finally {
     speaking = false;
+    ignoreVoiceUntil = Date.now() + 1500;
     currentAudio = null;
     setState(listening ? "listening" : "idle");
   }
@@ -191,11 +194,25 @@ formEl.addEventListener("submit", (e) => {
 });
 
 function maybeWake(transcript) {
+  if (Date.now() < ignoreVoiceUntil) return null;
   const t = transcript.trim();
   const lower = t.toLowerCase();
   const woke = /^(нова|nova|джарвис|jarvis)[,.\s:-]*/i.exec(lower);
-  if (woke) return t.slice(woke[0].length).trim() || t;
-  return t;
+  if (woke) {
+    const command = t.slice(woke[0].length).trim();
+    if (!command) {
+      wakeArmedUntil = Date.now() + 8000;
+      setState("listening", "жду команду");
+      return null;
+    }
+    wakeArmedUntil = 0;
+    return command;
+  }
+  if (Date.now() < wakeArmedUntil) {
+    wakeArmedUntil = 0;
+    return t;
+  }
+  return null;
 }
 
 function setupMic() {
@@ -248,6 +265,13 @@ document.getElementById("settingsBtn").addEventListener("click", async () => {
   settingsDlg.showModal();
 });
 document.getElementById("closeSettings").addEventListener("click", () => settingsDlg.close());
+document.getElementById("deleteKey").addEventListener("click", async () => {
+  if (!confirm("Удалить сохранённый API-ключ?")) return;
+  await api("/api/settings", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: "" }),
+  });
+  settings.api_key_preview = "";
+});
 document.getElementById("resetBtn").addEventListener("click", async () => {
   await fetch("/api/reset", { method: "POST" });
   logEl.innerHTML = "";
@@ -379,4 +403,172 @@ document.getElementById("chips").addEventListener("click", (event) => {
   const btn = event.target.closest("[data-chat]");
   if (!btn) return;
   sendText(btn.getAttribute("data-chat"), true);
+});
+
+const workspace = document.getElementById("workspacePanel");
+const workspaceTitle = document.getElementById("workspaceTitle");
+const workspaceHelp = document.getElementById("workspaceHelp");
+const workspaceForm = document.getElementById("workspaceForm");
+const workspaceContent = document.getElementById("workspaceContent");
+document.getElementById("workspaceClose").addEventListener("click", () => workspace.close());
+
+async function api(url, options = {}) {
+  const res = await fetch(url, options);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Операция не выполнена");
+  return data;
+}
+
+function field(label, name, placeholder = "", wide = false) {
+  return `<label class="${wide ? "wide" : ""}">${label}<input name="${name}" placeholder="${placeholder}" required /></label>`;
+}
+
+function cards(items, titleKey = "name") {
+  workspaceContent.innerHTML = items.length ? items.map((item) => `
+    <article class="data-card">
+      <header><strong>${escapeHtml(item[titleKey] || item.title || item.content || item.action || "")}</strong>
+      ${item.id ? `<button type="button" data-delete="${item.id}">Удалить</button>` : ""}</header>
+      <small>${escapeHtml(item.kind || item.role || item.task_type || item.category || item.created_at || "")}</small>
+      ${item.description ? `<p>${escapeHtml(item.description)}</p>` : ""}
+    </article>`).join("") : '<p class="hint">Записей пока нет.</p>';
+}
+
+async function openCollection(name) {
+  const configs = {
+    memory: {
+      title: "Memory", help: "Сохраняются только записи, которые вы добавили явно.",
+      form: `${field("Что запомнить", "content", "Предпочтение или факт", true)}
+        <label>Тип<select name="kind"><option value="long_term">Long-term</option><option value="preference">Preference</option><option value="episodic">Episodic</option><option value="semantic">Semantic</option></select></label>
+        ${field("Категория", "category", "general")}<button class="wide" type="submit">Запомнить</button>`,
+      endpoint: "/api/memory", titleKey: "content",
+    },
+    skills: {
+      title: "Skills", help: "Skill — именованная последовательность действий с явным триггером.",
+      form: `${field("Название", "name")}${field("Trigger", "trigger", "режим работы")}
+        ${field("Описание", "description", "", true)}${field("Действие", "action", "открой Chrome", true)}
+        <button class="wide" type="submit">Сохранить Skill</button>`,
+      endpoint: "/api/skills",
+    },
+    agents: {
+      title: "Agents", help: "Специализированные агенты работают с ограниченными инструментами и разрешениями.",
+      form: `${field("Имя", "name")}${field("Роль", "role", "Research Agent")}
+        ${field("Инструкции", "instructions", "", true)}${field("Инструменты", "tools", "web_search, memory", true)}
+        <button class="wide" type="submit">Создать Agent</button>`,
+      endpoint: "/api/agents",
+    },
+    tasks: {
+      title: "Tasks", help: "Локальный реестр одноразовых, повторяющихся и агентских задач.",
+      form: `${field("Задача", "title", "", true)}
+        <label>Тип<select name="task_type"><option>one-time</option><option>recurring</option><option>background</option><option>agent</option><option>reminder</option></select></label>
+        ${field("Расписание", "schedule", "необязательно")}<button class="wide" type="submit">Добавить задачу</button>`,
+      endpoint: "/api/tasks",
+    },
+  };
+  const cfg = configs[name];
+  workspaceTitle.textContent = cfg.title;
+  workspaceHelp.textContent = cfg.help;
+  workspaceForm.innerHTML = cfg.form;
+  const reload = async () => cards(await api(cfg.endpoint), cfg.titleKey);
+  workspaceForm.onsubmit = async (event) => {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(workspaceForm).entries());
+    if (name === "skills") payload.actions = [{ type: "command", value: payload.action }], delete payload.action;
+    if (name === "agents") payload.tools = payload.tools.split(",").map((x) => x.trim()).filter(Boolean);
+    await api(cfg.endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    workspaceForm.reset();
+    await reload();
+  };
+  workspaceContent.onclick = async (event) => {
+    const button = event.target.closest("[data-delete]");
+    if (!button) return;
+    await api(`${cfg.endpoint}/${button.dataset.delete}`, { method: "DELETE" });
+    await reload();
+  };
+  await reload();
+}
+
+async function openPermissions() {
+  workspaceTitle.textContent = "Permissions";
+  workspaceHelp.textContent = "Опасные возможности отключены по умолчанию. Включайте только необходимые.";
+  workspaceForm.innerHTML = "";
+  const items = await api("/api/permissions");
+  workspaceContent.innerHTML = items.map((item) => `
+    <label class="data-card"><input type="checkbox" data-permission="${item.name}" ${item.enabled ? "checked" : ""} />
+      <strong>${escapeHtml(item.name)}</strong> ${item.dangerous ? "— опасное разрешение" : ""}</label>`).join("");
+  workspaceContent.onchange = async (event) => {
+    const input = event.target.closest("[data-permission]");
+    if (!input) return;
+    if (input.checked && !confirm(`Включить ${input.dataset.permission}?`)) { input.checked = false; return; }
+    await api(`/api/permissions/${input.dataset.permission}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: input.checked }),
+    });
+  };
+}
+
+async function openDiagnostics() {
+  workspaceTitle.textContent = "NOVA Diagnostics";
+  workspaceHelp.textContent = "Проверка ядра, хранилища, голоса, сети и разрешений.";
+  workspaceForm.innerHTML = '<button type="submit">Проверить NOVA</button><button type="button" id="backupNow">Создать backup</button>';
+  const run = async () => {
+    const data = await api("/api/diagnostics");
+    workspaceContent.innerHTML = data.checks.map((item) => `<article class="data-card"><strong class="status-${item.status}">${item.status}</strong> ${escapeHtml(item.name)}<br><small>${escapeHtml(item.detail)}</small></article>`).join("");
+  };
+  workspaceForm.onsubmit = (event) => { event.preventDefault(); run(); };
+  workspaceForm.querySelector("#backupNow").onclick = async () => {
+    const data = await api("/api/backup", { method: "POST" });
+    workspaceHelp.textContent = `Backup: ${data.path}`;
+  };
+  await run();
+}
+
+async function openTools() {
+  workspaceTitle.textContent = "Local Tools";
+  workspaceHelp.textContent = "Поиск файлов выполняется только в профиле пользователя и требует READ_FILES.";
+  workspaceForm.innerHTML = `${field("Папка", "path", "C:\\Users\\...")}${field("Маска", "pattern", "*.pdf")}<button class="wide">Найти файлы</button>`;
+  workspaceForm.onsubmit = async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(workspaceForm).entries());
+    const found = await api("/api/tools/files", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation: "find", ...data }) });
+    cards(found, "path");
+  };
+  workspaceContent.innerHTML = "";
+}
+
+async function openResearch() {
+  workspaceTitle.textContent = "Creator Research / OSINT";
+  workspaceHelp.textContent = "Только открытые источники. NOVA не обходит авторизацию, CAPTCHA, paywall или ограничения доступа.";
+  workspaceForm.innerHTML = `${field("Публичный поисковый запрос", "query", "", true)}<button class="wide">Искать в открытых источниках</button>`;
+  workspaceForm.onsubmit = (event) => {
+    event.preventDefault();
+    const query = new FormData(workspaceForm).get("query");
+    workspace.close();
+    sendText(`погугли ${query}`, false);
+  };
+  workspaceContent.innerHTML = "";
+}
+
+async function openLogs() {
+  workspaceTitle.textContent = "Audit Logs";
+  workspaceHelp.textContent = "Ключи и пароли в журнал не записываются.";
+  workspaceForm.innerHTML = "";
+  cards(await api("/api/logs"), "action");
+}
+
+document.querySelector(".sidebar").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-section]");
+  if (!button) return;
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item === button));
+  const section = button.dataset.section;
+  if (section === "home" || section === "chat") { workspace.close(); inputEl.focus(); return; }
+  workspace.showModal();
+  try {
+    if (["memory", "skills", "agents", "tasks"].includes(section)) await openCollection(section);
+    else if (section === "permissions") await openPermissions();
+    else if (section === "diagnostics") await openDiagnostics();
+    else if (section === "tools") await openTools();
+    else if (section === "research") await openResearch();
+    else if (section === "logs") await openLogs();
+  } catch (err) {
+    workspaceContent.innerHTML = `<p class="error">${escapeHtml(err.message || err)}</p>`;
+  }
 });

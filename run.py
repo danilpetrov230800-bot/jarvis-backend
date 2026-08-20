@@ -18,10 +18,11 @@ if str(ROOT) not in sys.path:
 import uvicorn
 from dotenv import load_dotenv
 
+from jarvis.config import DATA_DIR
 from jarvis.net import find_free_port
 
 load_dotenv(ROOT / ".env")
-LOG = ROOT / "data" / "nova.log"
+LOG = DATA_DIR / "nova.log"
 
 
 def _setup_logging() -> None:

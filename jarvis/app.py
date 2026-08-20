@@ -3,27 +3,41 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from jarvis.brain import respond
-from jarvis.config import load_settings, merge_settings, public_settings, save_settings
+from jarvis.config import ROOT, load_settings, merge_settings, public_settings, save_settings
+from jarvis.core import (
+    delete_record,
+    list_records,
+    save_agent,
+    save_memory,
+    save_skill,
+    save_task,
+    search_memory,
+)
+from jarvis.diagnostics import run_diagnostics
 from jarvis.memory import ConversationMemory
+from jarvis.permissions import PermissionDenied, list_permissions, require, set_permission
+from jarvis.storage import create_backup, initialize, restore_backup
 from jarvis.voice import list_russian_voices, speech_preview, synthesize
 
-ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
 
-app = FastAPI(title="NOVA", version="1.4.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="NOVA", version="2.0.0")
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(PermissionDenied)
+async def permission_error_handler(_request: Request, exc: PermissionDenied) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"detail": str(exc), "permission": exc.permission})
 
 memory = ConversationMemory()
 
@@ -58,6 +72,36 @@ class PcIn(BaseModel):
     value: int | None = None
 
 
+class PermissionIn(BaseModel):
+    enabled: bool
+
+
+class MemoryIn(BaseModel):
+    content: str = Field(min_length=1, max_length=10_000)
+    kind: str = "long_term"
+    category: str = "general"
+    importance: int = Field(default=3, ge=1, le=5)
+
+
+class BackupIn(BaseModel):
+    path: str
+
+
+class FileToolIn(BaseModel):
+    operation: str
+    path: str = ""
+    destination: str = ""
+    pattern: str = "*"
+    content: str = ""
+    paths: list[str] = Field(default_factory=list)
+    confirmed: bool = False
+
+
+@app.on_event("startup")
+def startup() -> None:
+    initialize()
+
+
 @app.get("/api/status")
 def api_status() -> dict[str, Any]:
     settings = load_settings()
@@ -83,11 +127,112 @@ def get_settings() -> dict[str, Any]:
 def update_settings(payload: SettingsIn) -> dict[str, Any]:
     current = load_settings()
     patch = payload.model_dump(exclude_none=True)
-    if patch.get("api_key") == "":
-        patch.pop("api_key")
     updated = merge_settings(current, patch)
     save_settings(updated)
     return public_settings(updated)
+
+
+@app.get("/api/memory")
+def get_memories(q: str = Query(default="", max_length=500)) -> list[dict[str, Any]]:
+    return search_memory(q) if q else list_records("memories")
+
+
+@app.post("/api/memory")
+def add_memory(payload: MemoryIn) -> dict[str, Any]:
+    return save_memory(payload.content, payload.kind, payload.category, payload.importance)
+
+
+@app.get("/api/skills")
+def get_skills() -> list[dict[str, Any]]:
+    return list_records("skills")
+
+
+@app.get("/api/agents")
+def get_agents() -> list[dict[str, Any]]:
+    return list_records("agents")
+
+
+@app.get("/api/tasks")
+def get_tasks() -> list[dict[str, Any]]:
+    return list_records("tasks")
+
+
+@app.post("/api/skills")
+def add_skill(payload: dict[str, Any]) -> dict[str, Any]:
+    return save_skill(payload)
+
+
+@app.post("/api/agents")
+def add_agent(payload: dict[str, Any]) -> dict[str, Any]:
+    return save_agent(payload)
+
+
+@app.post("/api/tasks")
+def add_task(payload: dict[str, Any]) -> dict[str, Any]:
+    return save_task(payload)
+
+
+@app.delete("/api/{collection}/{record_id}")
+def remove_record(collection: str, record_id: int) -> dict[str, bool]:
+    if collection not in {"memory", "skills", "agents", "tasks"}:
+        raise HTTPException(404, "Раздел не найден")
+    table = "memories" if collection == "memory" else collection
+    return {"deleted": delete_record(table, record_id)}
+
+
+@app.get("/api/permissions")
+def permissions() -> list[dict[str, object]]:
+    return list_permissions()
+
+
+@app.put("/api/permissions/{name}")
+def permission(name: str, payload: PermissionIn) -> dict[str, object]:
+    try:
+        return set_permission(name, payload.enabled)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/diagnostics")
+def diagnostics() -> dict[str, Any]:
+    return run_diagnostics()
+
+
+@app.post("/api/backup")
+def backup() -> dict[str, str]:
+    return {"path": str(create_backup())}
+
+
+@app.post("/api/restore")
+def restore(payload: BackupIn) -> dict[str, str]:
+    restore_backup(Path(payload.path))
+    return {"status": "restored"}
+
+
+@app.get("/api/logs")
+def logs() -> list[dict[str, Any]]:
+    from jarvis.storage import rows
+
+    return rows("audit_log")[:500]
+
+
+@app.post("/api/tools/files")
+def file_tool(payload: FileToolIn) -> Any:
+    from jarvis import file_agent
+
+    operations = {
+        "find": lambda: file_agent.find_files(payload.path, payload.pattern, payload.content),
+        "read": lambda: {"content": file_agent.read_text(payload.path)},
+        "write": lambda: file_agent.write_text(payload.path, payload.content, overwrite=payload.confirmed),
+        "copy": lambda: file_agent.copy_or_move(payload.path, payload.destination),
+        "move": lambda: file_agent.copy_or_move(payload.path, payload.destination, move=True),
+        "archive": lambda: file_agent.archive(payload.paths, payload.destination),
+        "duplicates": lambda: file_agent.duplicate_groups(payload.path),
+        "delete": lambda: file_agent.delete(payload.path, confirmed=payload.confirmed),
+    }
+    if payload.operation not in operations:
+        raise HTTPException(400, "Неизвестная файловая операция")
+    return operations[payload.operation]()
 
 
 @app.get("/api/voices")
@@ -149,6 +294,7 @@ def pc_action(payload: PcIn) -> dict[str, Any]:
 
     action = payload.action
     try:
+        require("SCREEN_CONTROL" if action == "screenshot" else "SYSTEM_SETTINGS")
         if action == "volume_up":
             reply = pc_control.volume_up()
         elif action == "volume_down":

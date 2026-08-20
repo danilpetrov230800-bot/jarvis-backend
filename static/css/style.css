@@ -434,3 +434,78 @@ body.widget-mode .composer {
   border: none;
 }
 body.widget-mode #micBtn { margin: 0 auto; }
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 156px minmax(0, 1fr);
+  height: calc(100% - 72px);
+}
+.app-shell .layout { height: 100%; }
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 10px;
+  border-right: 1px solid var(--line);
+  background: rgba(8, 6, 18, .62);
+  overflow-y: auto;
+}
+.sidebar .nav-item {
+  border: 0;
+  padding: 10px 12px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: .03em;
+  color: var(--muted);
+  background: transparent;
+}
+.sidebar .nav-item:hover,
+.sidebar .nav-item.active {
+  color: var(--text);
+  background: rgba(173, 117, 255, .13);
+}
+.workspace-dialog {
+  width: min(860px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+}
+.workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.workspace-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.workspace-form label { display: grid; gap: 5px; }
+.workspace-form .wide { grid-column: 1 / -1; }
+.workspace-content {
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+  max-height: 440px;
+}
+.data-card {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.data-card header { display: flex; justify-content: space-between; gap: 12px; }
+.status-PASS { color: #76e6ac; }
+.status-WARNING { color: #ffd37a; }
+.status-FAIL { color: #ff7b96; }
+body.widget-mode .sidebar { display: none; }
+body.widget-mode .app-shell { display: block; height: calc(100% - 42px); }
+
+@media (max-width: 800px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 6px; }
+  .app-shell .layout { height: calc(100% - 52px); }
+  .workspace-form { grid-template-columns: 1fr; }
+}
