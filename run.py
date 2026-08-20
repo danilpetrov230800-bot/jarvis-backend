@@ -63,7 +63,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="NOVA personal assistant")
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
-    parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--browser", action="store_true", help="Open in a web browser instead of the app window")
+    parser.add_argument("--no-browser", action="store_true", help="Do not open a browser or native window")
     args = parser.parse_args()
 
     settings = load_settings()
@@ -76,8 +77,34 @@ def main() -> None:
     print("  Leave this window open. Close it to stop NOVA.", flush=True)
     print("", flush=True)
     logging.info("Serving %s", url)
+
+    use_native = not args.browser and not args.no_browser
+    server_thread = None
+    if use_native:
+        server_thread = threading.Thread(
+            target=lambda: uvicorn.run(app, host=host, port=port, log_level="warning"),
+            daemon=True,
+        )
+        server_thread.start()
+        health = url.rstrip("/") + "/health"
+        for _ in range(80):
+            try:
+                urllib.request.urlopen(health, timeout=0.5)
+                break
+            except Exception:
+                time.sleep(0.15)
+        try:
+            from jarvis.window import wait_and_start
+
+            wait_and_start(url)
+            return
+        except Exception:
+            logging.exception("Native window failed, opening browser")
     if settings.open_browser and not args.no_browser:
         threading.Thread(target=_open_when_ready, args=(url,), daemon=True).start()
+    if server_thread is not None:
+        server_thread.join()
+        return
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 

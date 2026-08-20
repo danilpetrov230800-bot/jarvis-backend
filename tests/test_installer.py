@@ -64,3 +64,14 @@ def test_home_has_nova_ui(client):
     html = client.get("/").text
     assert "NOVA" in html
     assert "hud" in html
+    assert "widgetBtn" in html
+    assert "pcDock" in html
+
+
+def test_run_py_has_no_browser_flag():
+    text = (ROOT / "run.py").read_text(encoding="utf-8")
+    assert "--no-browser" in text
+    assert "wait_and_start" in text
+    window = (ROOT / "jarvis" / "window.py").read_text(encoding="utf-8")
+    assert "import webview" in window
+    assert window.find("def wait_and_start") < window.find("import webview") or "try:" in window

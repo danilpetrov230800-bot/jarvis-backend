@@ -139,8 +139,7 @@ async function sendText(text, voiceReply = true) {
     if (!res.ok) throw new Error(data.detail || "Ошибка ответа");
     addMessage("assistant", data.reply, data.sources || []);
     if (voiceReply) {
-      audioQueue = audioQueue.then(() => speak(data.reply));
-      await audioQueue;
+      audioQueue = audioQueue.then(() => speak(data.speech || data.reply));
     } else {
       setState("idle");
     }
@@ -274,7 +273,7 @@ async function boot() {
     document.getElementById("assistantName").textContent = settings.assistant_name || "NOVA";
     addMessage(
       "assistant",
-      "Я Nova. Ключ не обязателен. Скажите: «открой YouTube», «запусти калькулятор», «который час» или спросите что угодно — поищу в сети.",
+      "Я Nova. Работаю как приложение на этом компьютере. Скажите: «открой YouTube», «громче», «пробки Москва», «погода», «курс доллара». Кнопка «Виджет» сворачивает окно.",
     );
     setState("idle", "онлайн");
   } catch {
@@ -283,3 +282,58 @@ async function boot() {
 }
 
 boot();
+
+let widgetMode = false;
+
+async function setWidget(on) {
+  widgetMode = Boolean(on);
+  document.body.classList.toggle("widget-mode", widgetMode);
+  const btn = document.getElementById("widgetBtn");
+  if (btn) btn.textContent = widgetMode ? "Развернуть" : "Виджет";
+  try {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.set_widget) {
+      await window.pywebview.api.set_widget(widgetMode);
+    }
+  } catch {
+    /* browser fallback keeps CSS-only widget */
+  }
+}
+
+document.getElementById("widgetBtn").addEventListener("click", () => setWidget(!widgetMode));
+hud.addEventListener("click", () => {
+  if (widgetMode) setWidget(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && widgetMode) setWidget(false);
+});
+
+async function sendPc(action, value) {
+  try {
+    const res = await fetch("/api/pc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(value == null ? { action } : { action, value }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      addMessage("assistant", data.detail || "Управление ПК доступно в Windows.");
+      return;
+    }
+    statusLine.textContent = data.reply || action;
+  } catch (err) {
+    addMessage("assistant", String(err.message || err));
+  }
+}
+
+document.getElementById("pcDock").addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-pc]");
+  if (!btn) return;
+  sendPc(btn.getAttribute("data-pc"));
+});
+
+let brightTimer = null;
+document.getElementById("brightRange").addEventListener("input", (event) => {
+  const value = Number(event.target.value);
+  clearTimeout(brightTimer);
+  brightTimer = setTimeout(() => sendPc("brightness", value), 180);
+});

@@ -23,6 +23,7 @@
       </div>
     </div>
     <div class="top-actions">
+      <button id="widgetBtn" type="button">Виджет</button>
       <button id="resetBtn" type="button">Новый чат</button>
       <button id="settingsBtn" type="button">Настройки</button>
     </div>
@@ -46,6 +47,18 @@
     </section>
 
     <section class="chat-col">
+      <div class="pc-dock" id="pcDock">
+        <span class="pc-label">ПК</span>
+        <button type="button" data-pc="volume_down" title="Тише">−</button>
+        <button type="button" data-pc="mute" title="Без звука">Mute</button>
+        <button type="button" data-pc="volume_up" title="Громче">+</button>
+        <button type="button" data-pc="darker" title="Темнее">Темнее</button>
+        <button type="button" data-pc="brighter" title="Ярче">Ярче</button>
+        <button type="button" data-pc="play" title="Пауза">Пауза</button>
+        <label class="bright-label">Яркость
+          <input id="brightRange" type="range" min="10" max="100" value="70" />
+        </label>
+      </div>
       <div id="log" class="log"></div>
       <form id="composer" class="composer">
         <button id="micBtn" type="button" aria-label="Голос">

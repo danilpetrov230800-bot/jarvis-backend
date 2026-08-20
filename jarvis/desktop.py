@@ -230,6 +230,12 @@ def handle_intent(text: str) -> ActionResult | None:
     if "заблок" in lowered and "компьютер" in lowered:
         return ActionResult(reply=lock_workstation(), tools=["lock"])
 
+    from jarvis.pc_control import handle_pc_intent
+
+    pc = handle_pc_intent(lowered)
+    if pc:
+        return ActionResult(reply=pc.reply, tools=pc.tools)
+
     calc = CALC_RE.match(raw)
     if calc:
         try:
@@ -314,10 +320,10 @@ def help_text() -> str:
         "• открой YouTube / GitHub / VK / почту\n"
         "• запусти блокнот / калькулятор / проводник / Chrome\n"
         "• найди на ютубе lo-fi\n"
-        "• который час / погода Москва\n"
-        "• сделай скриншот\n"
-        "• запиши: купить молоко\n"
-        "• посчитай 24*7\n"
+        "• который час / погода Москва / пробки Москва / курс доллара / новости\n"
+        "• громче / тише / выключи звук / ярче / темнее / пауза\n"
+        "• переведи hello / вики квантовый компьютер / погугли python\n"
+        "• сделай скриншот / запиши: купить молоко / посчитай 24*7\n"
         "• открой wikipedia.org\n"
         "А если спросите «что такое кванты» — поищу в интернете."
     )

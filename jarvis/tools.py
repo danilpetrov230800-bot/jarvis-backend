@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Callable, Awaitable
 from zoneinfo import ZoneInfo
 
-import httpx
-
 from jarvis.desktop import open_app, open_url, save_note, take_screenshot
 from jarvis.search import browse_url, format_search_results, search_web, serialize_sources
+from jarvis import services
 
 ToolHandler = Callable[..., Awaitable[str]]
 
@@ -66,13 +65,59 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_weather",
-            "description": "Погода через wttr.in. Город можно писать по-русски.",
+            "description": "Текущая погода по городу через Open-Meteo. Город можно писать по-русски.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "location": {"type": "string", "description": "Город или место."},
                 },
                 "required": ["location"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_traffic",
+            "description": "Сводка пробок в городе и ссылка на Яндекс.Карты.",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string", "description": "Город, например Москва."}},
+                "required": ["city"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_currency",
+            "description": "Курс доллара, евро и юаня по данным ЦБ РФ.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_news",
+            "description": "Свежие заголовки новостей.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "pc_control",
+            "description": "Управление ПК: громкость, яркость, пауза медиа. Только Windows.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "description": "volume_up, volume_down, mute, brighter, darker, brightness, play, next, prev",
+                    },
+                    "value": {"type": "integer", "description": "Яркость 0–100, если action=brightness."},
+                },
+                "required": ["action"],
             },
         },
     },
@@ -157,28 +202,53 @@ async def tool_get_datetime(ctx: ToolContext, timezone: str = "Europe/Moscow") -
 
 
 async def tool_get_weather(ctx: ToolContext, location: str) -> str:
-    url = f"https://wttr.in/{location}?format=j1&lang=ru"
-    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-        response = await client.get(url, headers={"User-Agent": "jarvis-assistant"})
-        response.raise_for_status()
-        data = response.json()
-    current = data.get("current_condition", [{}])[0]
-    nearest = (data.get("nearest_area") or [{}])[0]
-    place = ""
-    if nearest.get("areaName"):
-        place = nearest["areaName"][0].get("value", location)
-    ctx.sources.append({"title": f"Погода: {place or location}", "url": f"https://wttr.in/{location}"})
+    data = await services.get_weather(location)
+    ctx.sources.append({"title": data["title"], "url": data["url"]})
     ctx.log.append(f"weather:{location}")
-    desc = ""
-    langs = current.get("lang_ru") or current.get("weatherDesc") or []
-    if langs:
-        desc = langs[0].get("value", "")
-    return (
-        f"Место: {place or location}\n"
-        f"Сейчас: {current.get('temp_C')}°C, ощущается как {current.get('FeelsLikeC')}°C\n"
-        f"Описание: {desc}\n"
-        f"Ветер: {current.get('windspeedKmph')} км/ч, влажность {current.get('humidity')}%"
-    )
+    return data["reply"]
+
+
+async def tool_get_traffic(ctx: ToolContext, city: str) -> str:
+    data = await services.get_traffic(city)
+    ctx.sources.extend(list(data.get("sources") or []))
+    ctx.log.append(f"traffic:{city}")
+    return str(data["reply"])
+
+
+async def tool_get_currency(ctx: ToolContext) -> str:
+    data = await services.get_currency()
+    ctx.sources.append({"title": data["title"], "url": data["url"]})
+    ctx.log.append("currency")
+    return data["reply"]
+
+
+async def tool_get_news(ctx: ToolContext) -> str:
+    data = await services.get_news()
+    ctx.sources.extend(list(data.get("sources") or []))
+    ctx.log.append("news")
+    return str(data["reply"])
+
+
+async def tool_pc_control(ctx: ToolContext, action: str, value: int | None = None) -> str:
+    from jarvis import pc_control
+
+    mapping = {
+        "volume_up": pc_control.volume_up,
+        "volume_down": pc_control.volume_down,
+        "mute": pc_control.volume_mute,
+        "brighter": pc_control.brightness_up,
+        "darker": pc_control.brightness_down,
+        "play": pc_control.media_play_pause,
+        "next": pc_control.media_next,
+        "prev": pc_control.media_prev,
+    }
+    ctx.log.append(f"pc:{action}")
+    if action == "brightness":
+        return pc_control.set_brightness(value or 70)
+    handler = mapping.get(action)
+    if handler is None:
+        return f"Неизвестное действие ПК: {action}"
+    return handler()
 
 
 async def tool_open_url(ctx: ToolContext, url: str) -> str:
@@ -213,6 +283,10 @@ HANDLERS: dict[str, Any] = {
     "browse_url": tool_browse_url,
     "get_datetime": tool_get_datetime,
     "get_weather": tool_get_weather,
+    "get_traffic": tool_get_traffic,
+    "get_currency": tool_get_currency,
+    "get_news": tool_get_news,
+    "pc_control": tool_pc_control,
     "open_url": tool_open_url,
     "open_app": tool_open_app,
     "take_screenshot": tool_take_screenshot,

@@ -18,7 +18,9 @@ def test_status_and_home(client):
 def test_legacy_chat_without_key(client):
     response = client.post("/chat", json={"text": "привет"})
     assert response.status_code == 200
-    assert "Nova" in response.json()["reply"]
+    body = response.json()
+    assert "Nova" in body["reply"]
+    assert body.get("speech")
 
 
 def test_open_site_command(client, monkeypatch):
@@ -27,3 +29,15 @@ def test_open_site_command(client, monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert "open_url" in body["tools"]
+
+
+def test_pc_endpoints(client, monkeypatch):
+    listing = client.get("/api/pc")
+    assert listing.status_code == 200
+    assert "volume_up" in listing.json()["actions"]
+    monkeypatch.setattr("jarvis.pc_control.volume_up", lambda: "Громкость выше.")
+    ok = client.post("/api/pc", json={"action": "volume_up"})
+    assert ok.status_code == 200
+    assert ok.json()["action"] == "volume_up"
+    missing = client.post("/api/pc", json={"action": "explode"})
+    assert missing.status_code == 400

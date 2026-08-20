@@ -349,3 +349,65 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   .layout { grid-template-columns: 1fr; height: auto; }
   .hud { width: 260px; margin: 12px auto; }
 }
+
+.pc-dock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.pc-label {
+  font-family: var(--display);
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: var(--cyan);
+}
+.pc-dock button {
+  padding: 8px 10px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.bright-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.bright-label input { width: 110px; }
+
+body.widget-mode .aurora,
+body.widget-mode #stars,
+body.widget-mode .vignette,
+body.widget-mode .heard,
+body.widget-mode .brand div,
+body.widget-mode .pc-dock,
+body.widget-mode .log,
+body.widget-mode #resetBtn,
+body.widget-mode #settingsBtn,
+body.widget-mode #input,
+body.widget-mode #sendBtn {
+  display: none !important;
+}
+body.widget-mode .topbar { padding: 6px 8px; }
+body.widget-mode .mark { width: 28px; height: 28px; border-radius: 8px; font-size: 12px; }
+body.widget-mode .layout {
+  grid-template-columns: 1fr;
+  height: calc(100% - 42px);
+  padding: 0 6px 6px;
+}
+body.widget-mode .hud { width: 118px; }
+body.widget-mode .chat-col {
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+}
+body.widget-mode .composer {
+  grid-template-columns: 1fr;
+  padding: 4px;
+  border: none;
+}
+body.widget-mode #micBtn { margin: 0 auto; }

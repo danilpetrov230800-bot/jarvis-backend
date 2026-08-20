@@ -33,6 +33,7 @@ SKIP_PARTS = {
     "runtime",
     "dist",
     ".git",
+    "tts_cache",
 }
 
 

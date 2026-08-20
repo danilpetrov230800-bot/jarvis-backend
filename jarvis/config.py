@@ -21,7 +21,7 @@ class Settings(BaseModel):
     assistant_name: str = "Nova"
     language: str = "ru"
     tts_voice: str = "ru-RU-DmitryNeural"
-    tts_rate: str = "+8%"
+    tts_rate: str = "+12%"
     search_region: str = "wt-wt"
     host: str = "127.0.0.1"
     port: int = 8080

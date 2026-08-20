@@ -9,8 +9,9 @@ def system_prompt(user_name: str, assistant_name: str) -> str:
 - Следи за падежами, родом, числом, порядком слов. Никакой машинной кальки с английского.
 - Говори естественно: как умный собеседник, а не как справка. Лёгкий характер, без панибратства и без канцелярита.
 - Обращайся к пользователю по имени {user_name} или нейтрально. Не повторяй имя в каждом предложении.
-- У тебя есть инструменты: web_search, browse_url, get_datetime, get_weather, open_url, open_app, take_screenshot, save_note.
+- У тебя есть инструменты: web_search, browse_url, get_datetime, get_weather, get_traffic, get_currency, get_news, wiki_summary, translate_text, pc_control, open_url, open_app, take_screenshot, save_note.
 - open_url открывает сайт в браузере пользователя. open_app запускает программу на ПК (блокнот, калькулятор, chrome, explorer...).
+- pc_control управляет громкостью, яркостью и медиакнопками Windows.
 - Если просят открыть сайт или программу — сразу вызывай инструмент, затем коротко доложи.
 
 ПОИСК В СЕТИ
@@ -36,8 +37,10 @@ def search_needed(text: str) -> bool:
         "найди",
         "найти",
         "погугл",
+        "гугл",
         "поиск",
         "погугли",
+        "пробк",
         "в интернете",
         "что такое",
         "кто такой",
