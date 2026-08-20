@@ -3,6 +3,7 @@ import socket
 import pytest
 
 from jarvis import desktop, search
+import run
 from run import safe_host
 
 
@@ -52,3 +53,13 @@ def test_unknown_executable_is_not_launched(monkeypatch):
 def test_openapi_surfaces_are_disabled(client):
     assert client.get("/docs").status_code == 404
     assert client.get("/openapi.json").status_code == 404
+
+
+def test_windowed_launcher_needs_no_console(tmp_path, monkeypatch):
+    monkeypatch.setattr(run, "LOG", tmp_path / "nova.log")
+    monkeypatch.setattr(run.sys, "stdout", None)
+    monkeypatch.setattr(run.sys, "stderr", None)
+    run._setup_logging()
+    run.console("not visible")
+    run.logging.info("windowed mode")
+    assert "windowed mode" in run.LOG.read_text("utf-8")

@@ -28,14 +28,20 @@ LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 def _setup_logging() -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
+    handlers: list[logging.Handler] = [logging.FileHandler(LOG, encoding="utf-8")]
+    if sys.stdout is not None:
+        handlers.append(logging.StreamHandler(sys.stdout))
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
-        handlers=[
-            logging.FileHandler(LOG, encoding="utf-8"),
-            logging.StreamHandler(sys.stdout),
-        ],
+        handlers=handlers,
+        force=True,
     )
+
+
+def console(message: str = "") -> None:
+    if sys.stdout is not None:
+        print(message, flush=True)
 
 
 def _open_when_ready(url: str) -> None:
@@ -54,7 +60,7 @@ def _open_when_ready(url: str) -> None:
             webbrowser.open(url)
     except Exception:
         logging.exception("Failed to open browser")
-        print(f"Open this URL in Chrome or Edge: {url}", flush=True)
+        console(f"Open this URL in Chrome or Edge: {url}")
 
 
 def safe_host(requested: str) -> str:
@@ -81,10 +87,10 @@ def main() -> None:
     requested = args.port or settings.port
     port = find_free_port(host, requested)
     url = f"http://{host}:{port}"
-    print("", flush=True)
-    print(f"  NOVA is starting: {url}", flush=True)
-    print("  Leave this window open. Close it to stop NOVA.", flush=True)
-    print("", flush=True)
+    console()
+    console(f"  NOVA is starting: {url}")
+    console("  Leave this window open. Close it to stop NOVA.")
+    console()
     logging.info("Serving %s", url)
 
     use_native = not args.browser and not args.no_browser
@@ -123,6 +129,7 @@ if __name__ == "__main__":
     except Exception:
         _setup_logging()
         logging.exception("NOVA crashed")
-        print("\nNOVA failed. See data\\nova.log\n", flush=True)
-        traceback.print_exc()
+        console(f"\nNOVA failed. See {LOG}\n")
+        if sys.stderr is not None:
+            traceback.print_exc()
         sys.exit(1)

@@ -48,13 +48,18 @@ jobs:
           $p = Start-Process -FilePath "dist\NOVA\NOVA.exe" -ArgumentList "--no-browser" -PassThru
           $ok = $false
           foreach ($i in 1..40) {
+            if ($p.HasExited) { break }
             try {
               $r = Invoke-RestMethod "http://127.0.0.1:8080/api/status" -TimeoutSec 2
               if ($r.ready) { $ok = $true; break }
             } catch { Start-Sleep -Milliseconds 500 }
           }
           Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-          if (-not $ok) { throw "Packaged NOVA failed health check" }
+          if (-not $ok) {
+            $log = Join-Path $env:LOCALAPPDATA "NOVA\nova.log"
+            if (Test-Path $log) { Get-Content $log }
+            throw "Packaged NOVA failed health check; exited=$($p.HasExited)"
+          }
       - name: Build installer
         shell: pwsh
         run: |
@@ -71,13 +76,18 @@ jobs:
           $p = Start-Process $exe -ArgumentList "--no-browser" -PassThru
           $ok = $false
           foreach ($i in 1..40) {
+            if ($p.HasExited) { break }
             try {
               $r = Invoke-RestMethod "http://127.0.0.1:8080/api/diagnostics" -TimeoutSec 2
               if ($r.status -ne "FAIL") { $ok = $true; break }
             } catch { Start-Sleep -Milliseconds 500 }
           }
           Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-          if (-not $ok) { throw "Installed NOVA failed diagnostics" }
+          if (-not $ok) {
+            $log = Join-Path $env:LOCALAPPDATA "NOVA\nova.log"
+            if (Test-Path $log) { Get-Content $log }
+            throw "Installed NOVA failed diagnostics; exited=$($p.HasExited)"
+          }
           $uninstaller = Join-Path $env:LOCALAPPDATA "Programs\NOVA\unins000.exe"
           & $uninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
           if (Test-Path $exe) { throw "Uninstall left the application executable behind" }
