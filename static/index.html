@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080b12" />
+    <title>Nova — локальный AI-ассистент</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark"><span></span></div>
+          <div>
+            <strong>NOVA</strong>
+            <small>LOCAL INTELLIGENCE</small>
+          </div>
+        </div>
+
+        <button class="new-chat" id="newChat">
+          <span>＋</span> Новый диалог
+        </button>
+
+        <nav class="nav">
+          <button class="nav-item active">
+            <span class="nav-icon">◫</span> Ассистент
+          </button>
+          <button class="nav-item" id="openSettings">
+            <span class="nav-icon">⌁</span> Настройки
+          </button>
+        </nav>
+
+        <div class="privacy-card">
+          <div class="privacy-icon">⌾</div>
+          <div>
+            <strong>Приватный режим</strong>
+            <p>Диалоги и модель остаются на этом устройстве.</p>
+          </div>
+        </div>
+
+        <div class="system-state">
+          <span class="status-dot" id="sidebarDot"></span>
+          <div>
+            <strong id="sidebarStatus">Проверка системы</strong>
+            <small id="modelLabel">Ollama</small>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobileMenu" aria-label="Открыть меню">☰</button>
+          <div class="session-title">
+            <span class="status-dot" id="headerDot"></span>
+            <span id="headerStatus">Nova запускается</span>
+          </div>
+          <div class="top-actions">
+            <button class="icon-button" id="clearChat" title="Очистить диалог">↺</button>
+            <button class="profile">D</button>
+          </div>
+        </header>
+
+        <div class="conversation" id="conversation">
+          <section class="hero" id="hero">
+            <div class="orb-wrap">
+              <div class="orb">
+                <div class="orb-core"></div>
+                <div class="orb-ring ring-one"></div>
+                <div class="orb-ring ring-two"></div>
+              </div>
+              <div class="orb-shadow"></div>
+            </div>
+            <p class="eyebrow">СИСТЕМА ГОТОВА</p>
+            <h1>Добрый вечер, Данила.</h1>
+            <p class="hero-copy">
+              Я Nova — ваш локальный AI-ассистент.<br />
+              Чем могу помочь?
+            </p>
+            <div class="suggestions">
+              <button data-prompt="Проанализируй файлы в текущей папке">
+                <span>⌘</span>
+                <div><strong>Анализ системы</strong><small>Исследовать файлы и процессы</small></div>
+                <b>→</b>
+              </button>
+              <button data-prompt="Помоги составить план на сегодня">
+                <span>◇</span>
+                <div><strong>Спланировать день</strong><small>Задачи, фокус и приоритеты</small></div>
+                <b>→</b>
+              </button>
+              <button data-prompt="Напиши Python-скрипт для сортировки файлов по типам">
+                <span>⌗</span>
+                <div><strong>Создать скрипт</strong><small>Автоматизировать рутину</small></div>
+                <b>→</b>
+              </button>
+            </div>
+          </section>
+          <div class="messages" id="messages" aria-live="polite"></div>
+        </div>
+
+        <footer class="composer-area">
+          <form class="composer" id="chatForm">
+            <button type="button" class="attach" title="Команда терминала" id="commandMode">&gt;_</button>
+            <textarea
+              id="prompt"
+              rows="1"
+              placeholder="Спросите Nova о чём угодно..."
+              aria-label="Сообщение для Nova"
+            ></textarea>
+            <button type="button" class="voice" id="voiceButton" title="Голосовой ввод">◉</button>
+            <button type="submit" class="send" id="sendButton" aria-label="Отправить">↑</button>
+          </form>
+          <p>Enter — отправить · Shift + Enter — новая строка · <code>/run</code> — команда</p>
+        </footer>
+      </section>
+    </main>
+
+    <dialog class="settings" id="settingsDialog">
+      <form method="dialog">
+        <div class="dialog-head">
+          <div><small>КОНФИГУРАЦИЯ</small><h2>Настройки Nova</h2></div>
+          <button value="cancel" aria-label="Закрыть">×</button>
+        </div>
+        <label>
+          Модель Ollama
+          <input id="modelInput" value="qwen2.5:7b" list="models" />
+          <datalist id="models"></datalist>
+        </label>
+        <label class="toggle-row">
+          <div><strong>Озвучивать ответы</strong><small>Системный синтез речи браузера</small></div>
+          <input type="checkbox" id="speechToggle" />
+        </label>
+        <div class="setup-note">
+          <strong>Локальный запуск</strong>
+          <code>ollama serve</code>
+          <code id="pullCommand">ollama pull qwen2.5:7b</code>
+        </div>
+        <button class="save-settings" value="default" id="saveSettings">Сохранить</button>
+      </form>
+    </dialog>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
