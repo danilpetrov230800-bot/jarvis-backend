@@ -1,3 +1,5 @@
+setuptools>=69.0.0
+wheel>=0.43.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 openai>=1.54.0
@@ -7,4 +9,5 @@ ddgs>=9.0.0
 edge-tts>=6.1.0
 pydantic>=2.9.0
 python-dotenv>=1.0.1
+proxy_tools==0.1.0
 pywebview>=5.0.0

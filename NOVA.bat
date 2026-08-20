@@ -8,6 +8,7 @@ echo.
 echo  NOVA
 echo  Keep this window open.
 echo  First start may take 1-3 minutes.
+echo  If install fails, copy this folder to C:\NOVA
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0installer\bootstrap.ps1"
 set ERR=%ERRORLEVEL%

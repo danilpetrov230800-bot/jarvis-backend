@@ -13,6 +13,7 @@ $RuntimeDir = Join-Path $Root "runtime"
 $Python = Join-Path $RuntimeDir "python.exe"
 $Req = Join-Path $Root "requirements.txt"
 $HashFile = Join-Path $RuntimeDir ".deps-hash"
+$Wheels = Join-Path $PSScriptRoot "wheels"
 $PythonVersion = "3.12.10"
 $PythonZipName = "python-$PythonVersion-embed-amd64.zip"
 $PythonUrl = "https://www.python.org/ftp/python/$PythonVersion/$PythonZipName"
@@ -33,6 +34,16 @@ function Get-FileSha256([string]$Path) {
     return (Get-FileHash -Path $Path -Algorithm SHA256).Hash
 }
 
+function Show-PathWarning {
+    foreach ($ch in $Root.ToCharArray()) {
+        if ([int]$ch -gt 127 -or $ch -eq [char]40 -or $ch -eq [char]41) {
+            Write-Host "WARNING: this folder path is hard for Python."
+            Write-Host "If install fails, copy the NOVA folder to C:\NOVA and run NOVA.bat there."
+            return
+        }
+    }
+}
+
 function Enable-ProjectPath {
     if (-not (Test-Path $RuntimeDir)) { return }
     $pth = Get-ChildItem $RuntimeDir -Filter "python*._pth" | Select-Object -First 1
@@ -40,6 +51,7 @@ function Enable-ProjectPath {
     $lines = New-Object System.Collections.Generic.List[string]
     $hasParent = $false
     $hasSite = $false
+    $hasSitePkg = $false
     foreach ($line in (Get-Content -Path $pth.FullName)) {
         $trim = $line.Trim()
         if ($trim -eq "#import site") {
@@ -49,11 +61,18 @@ function Enable-ProjectPath {
         }
         if ($trim -eq "..") { $hasParent = $true }
         if ($trim -eq "import site") { $hasSite = $true }
+        if ($trim -eq "Lib\site-packages" -or $trim -eq "Lib/site-packages") { $hasSitePkg = $true }
         if ($trim -ne "") { $lines.Add($trim) }
     }
+    if (-not $hasSitePkg) { $lines.Add("Lib\site-packages") }
     if (-not $hasParent) { $lines.Add("..") }
     if (-not $hasSite) { $lines.Add("import site") }
     Set-Content -Path $pth.FullName -Value ($lines -join "`r`n") -Encoding ASCII
+}
+
+function Test-CoreImports {
+    & $Python -c "import fastapi,uvicorn,edge_tts"
+    return ($LASTEXITCODE -eq 0)
 }
 
 function Install-PortablePython {
@@ -82,16 +101,39 @@ function Install-PortablePython {
     Remove-Item $getPip -Force -ErrorAction SilentlyContinue
 }
 
+function Install-BuildTools {
+    Write-Step "Installing pip, setuptools, wheel..."
+    & $Python -m pip install --upgrade pip setuptools wheel --no-warn-script-location
+}
+
+function Install-Requirements {
+    $pipArgs = @(
+        "-m", "pip", "install", "-r", $Req,
+        "--prefer-binary",
+        "--no-build-isolation",
+        "--no-warn-script-location"
+    )
+    if (Test-Path $Wheels) {
+        $pipArgs += @("--find-links", $Wheels)
+    }
+    & $Python @pipArgs
+}
+
 function Install-Dependencies {
     if (-not (Test-Path $Req)) { throw "requirements.txt is missing" }
     $hash = Get-FileSha256 $Req
     if ((Test-Path $HashFile) -and ((Get-Content $HashFile -Raw).Trim() -eq $hash)) {
         return
     }
+    Enable-ProjectPath
+    Install-BuildTools
     Write-Step "Installing NOVA libraries..."
-    & $Python -m pip install --upgrade pip --no-warn-script-location
-    & $Python -m pip install -r $Req --no-warn-script-location
-    if ($LASTEXITCODE -ne 0) { throw "pip install failed." }
+    Install-Requirements
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "pip had errors. Checking already installed libraries..."
+        if (-not (Test-CoreImports)) { throw "pip install failed." }
+        Write-Host "Core libraries OK. App window extra may be missing; browser UI will work."
+    }
     Set-Content -Path $HashFile -Value $hash -Encoding ASCII
 }
 
@@ -119,6 +161,7 @@ function Start-Nova {
     Write-Step "Starting NOVA..."
     Set-Location $Root
     $env:PYTHONPATH = $Root
+    $env:PYTHONUTF8 = "1"
     Enable-ProjectPath
     New-Item -ItemType Directory -Force -Path (Join-Path $Root "data") | Out-Null
     Write-Host "NOVA UI: http://127.0.0.1:8080"
@@ -131,6 +174,7 @@ function Start-Nova {
     }
 }
 
+Show-PathWarning
 Unblock-Tree $Root
 Install-PortablePython
 Enable-ProjectPath

@@ -37,6 +37,12 @@ def test_bootstrap_downloads_embeddable_python():
     assert "Enable-ProjectPath" in text
     assert 'Add("..")' in text or '".."' in text
     assert "Unblock-File" in text
+    assert "setuptools" in text
+    assert "no-build-isolation" in text
+    assert "find-links" in text
+    assert "site-packages" in text
+    assert "C:\\NOVA" in text
+    assert (ROOT / "installer" / "wheels" / "proxy_tools-0.1.0-py3-none-any.whl").is_file()
 
 
 def test_package_contains_runtime_files_not_tests(tmp_path):
