@@ -69,8 +69,8 @@ jobs:
         shell: pwsh
         run: |
           $installer = (Resolve-Path "release\NOVA-Setup.exe").Path
-          & $installer /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
-          if ($LASTEXITCODE -ne 0) { throw "Installer failed: $LASTEXITCODE" }
+          $install = Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer failed: $($install.ExitCode)" }
           $exe = Join-Path $env:LOCALAPPDATA "Programs\NOVA\NOVA.exe"
           if (-not (Test-Path $exe)) { throw "Installed executable is missing" }
           $p = Start-Process $exe -ArgumentList "--no-browser" -PassThru
@@ -89,7 +89,8 @@ jobs:
             throw "Installed NOVA failed diagnostics; exited=$($p.HasExited)"
           }
           $uninstaller = Join-Path $env:LOCALAPPDATA "Programs\NOVA\unins000.exe"
-          & $uninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller failed: $($uninstall.ExitCode)" }
           if (Test-Path $exe) { throw "Uninstall left the application executable behind" }
       - name: Create release files
         shell: pwsh

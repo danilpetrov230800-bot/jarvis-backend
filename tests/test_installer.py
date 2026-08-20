@@ -88,3 +88,10 @@ def test_run_py_has_no_browser_flag():
     window = (ROOT / "jarvis" / "window.py").read_text(encoding="utf-8")
     assert "import webview" in window
     assert window.find("def wait_and_start") < window.find("import webview") or "try:" in window
+
+
+def test_windows_workflow_waits_for_gui_installers():
+    workflow = (ROOT / ".github" / "workflows" / "windows-package.yml").read_text(encoding="utf-8")
+    assert workflow.count("-Wait -PassThru") == 2
+    assert "$install.ExitCode" in workflow
+    assert "$uninstall.ExitCode" in workflow
