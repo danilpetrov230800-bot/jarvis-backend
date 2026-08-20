@@ -24,6 +24,14 @@ Nova — персональный ИИ-ассистент в стиле J.A.R.V.
 - 📲 **PWA** — установка как отдельное приложение, работает офлайн-оболочка
 - 💬 Потоковые ответы и память диалога
 
+## Скачать для Windows (установщик)
+
+Готовый установщик (Python не нужен): **[NovaSetup.exe](https://github.com/danilpetrov230800-bot/jarvis-backend/releases/latest/download/NovaSetup.exe)**
+(или портативный [Nova.exe](https://github.com/danilpetrov230800-bot/jarvis-backend/releases/latest/download/Nova.exe)).
+
+Установи, запусти ярлык Nova — программа сама поставит локальный ИИ и откроет браузер.
+Все релизы: [Releases](https://github.com/danilpetrov230800-bot/jarvis-backend/releases).
+
 ## Запуск в один клик
 
 Ничего настраивать не нужно — запусти файл под свою систему, остальное Nova
