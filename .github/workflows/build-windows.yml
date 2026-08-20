@@ -1,0 +1,85 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches: ["cursor/setup-cloud-agent-environment-74f2"]
+    tags: ["v*"]
+    paths:
+      - "run.py"
+      - "api/**"
+      - "static/**"
+      - "requirements.txt"
+      - "packaging/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build Nova.exe (PyInstaller)
+        run: >
+          pyinstaller --noconfirm --onefile --name Nova
+          --icon packaging/nova.ico
+          --add-data "static;static"
+          --collect-all fastapi --collect-all starlette --collect-all uvicorn
+          --collect-all pydantic --collect-all pydantic_core --collect-all anyio
+          --collect-all click --collect-all h11 --collect-all sniffio
+          --hidden-import psutil
+          run.py
+
+      - name: Smoke test Nova.exe (demo mode, no Ollama)
+        shell: pwsh
+        env:
+          NOVA_SKIP_OLLAMA: "1"
+          NOVA_NO_BROWSER: "1"
+          NOVA_PORT: "8000"
+        run: |
+          $p = Start-Process -FilePath "dist\Nova.exe" -PassThru
+          $ok = $false
+          foreach ($i in 1..30) {
+            try {
+              $r = Invoke-WebRequest "http://127.0.0.1:8000/api/health" -UseBasicParsing -TimeoutSec 2
+              if ($r.StatusCode -eq 200) { Write-Host "Health: $($r.Content)"; $ok = $true; break }
+            } catch { Start-Sleep -Seconds 2 }
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "Nova.exe did not respond on /api/health" }
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer (NovaSetup.exe)
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\nova.iss'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nova-Windows
+          path: |
+            dist/Nova.exe
+            Output/NovaSetup.exe
+          if-no-files-found: error
+
+      - name: Publish Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/Nova.exe
+            Output/NovaSetup.exe
+          generate_release_notes: true

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Nova · персональный ИИ-ассистент</title>
+    <meta name="theme-color" content="#05060c" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/static/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true">
+      <span class="blob blob-1"></span>
+      <span class="blob blob-2"></span>
+      <span class="blob blob-3"></span>
+    </div>
+
+    <div class="app" id="app">
+      <header class="topbar" id="topbar">
+        <div class="brand">
+          <div class="orb" id="orb"><span class="orb-core"></span><span class="orb-ring"></span></div>
+          <div class="brand-text">
+            <h1>NOVA</h1>
+            <p class="tagline">персональный ИИ-ассистент</p>
+          </div>
+        </div>
+        <div class="status" id="status">
+          <span class="dot"></span>
+          <span class="status-label" id="statusLabel">подключение…</span>
+        </div>
+        <div class="topbar-actions">
+          <button id="installBtn" class="icon-btn" title="Установить как приложение" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M5 20h14v-2H5v2zM12 3v10.2l3.6-3.6L17 11l-5 5-5-5 1.4-1.4L12 13.2V3h0z"/></svg>
+          </button>
+          <button id="sysBtn" class="icon-btn" title="Управление ПК">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm8.9 4a7 7 0 00-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 00-1.7-1l-.4-2.5H9.7L9.3 4a7 7 0 00-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 000 2l-2 1.6 2 3.4 2.4-1a7 7 0 001.7 1l.4 2.5h4.6l.4-2.5a7 7 0 001.7-1l2.4 1 2-3.4-2-1.6c.1-.3.1-.6.1-1z"/></svg>
+          </button>
+          <button id="ttsBtn" class="icon-btn" title="Озвучивать ответы" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 00-2.5-4v8a4.5 4.5 0 002.5-4z"/></svg>
+          </button>
+          <button id="widgetBtn" class="icon-btn" title="Свернуть в виджет">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 4h7v2H6v5H4V4zm16 16h-7v-2h5v-5h2v7z"/></svg>
+          </button>
+          <button id="clearBtn" class="icon-btn" title="Новый диалог">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M6 7h12v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7zm3-3h6l1 2H8l1-2z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="chat" id="chat">
+        <section class="welcome" id="welcome">
+          <div class="welcome-orb"><span></span><span></span><span></span></div>
+          <h2>Привет, я Nova.</h2>
+          <p>Локальный ИИ + инструменты: погода, поиск, курсы, время, маршруты, управление ПК.</p>
+          <div class="suggestions" id="suggestions">
+            <button class="chip">Погода в Москве</button>
+            <button class="chip">Курс доллара</button>
+            <button class="chip">Новости технологий</button>
+            <button class="chip">Который час в Токио</button>
+            <button class="chip">Статус системы</button>
+            <button class="chip">Расскажи о чёрных дырах</button>
+          </div>
+        </section>
+      </main>
+
+      <footer class="composer">
+        <div class="composer-inner">
+          <button id="micBtn" class="icon-btn mic" title="Голосовой ввод">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V22h2v-3.08A7 7 0 0019 12h-2z"/></svg>
+          </button>
+          <textarea id="input" rows="1" placeholder="Сообщение для Nova…" autocomplete="off"></textarea>
+          <button id="sendBtn" class="send-btn" title="Отправить" disabled>
+            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 20.5v-6l8-2.5-8-2.5v-6l19 8.5z"/></svg>
+          </button>
+        </div>
+        <p class="hint" id="hint">Enter — отправить · Shift+Enter — новая строка</p>
+      </footer>
+    </div>
+
+    <!-- Панель управления ПК -->
+    <aside class="sys-panel" id="sysPanel" aria-hidden="true">
+      <div class="sys-head">
+        <h3>Управление ПК</h3>
+        <button id="sysClose" class="icon-btn" title="Закрыть">✕</button>
+      </div>
+
+      <div class="sys-status" id="sysStatus">Загрузка статуса…</div>
+
+      <div class="sys-group">
+        <label>Громкость <span id="volVal">50%</span></label>
+        <input type="range" id="volume" min="0" max="100" value="50" />
+      </div>
+      <div class="sys-group">
+        <label>Яркость <span id="brVal">80%</span></label>
+        <input type="range" id="brightness" min="5" max="100" value="80" />
+      </div>
+      <div class="sys-group">
+        <label>Медиа</label>
+        <div class="sys-btns">
+          <button data-media="prev" class="sys-action">⏮</button>
+          <button data-media="play" class="sys-action">⏯</button>
+          <button data-media="next" class="sys-action">⏭</button>
+          <button data-mute="toggle" class="sys-action">🔇</button>
+        </div>
+      </div>
+      <div class="sys-group">
+        <label>Система</label>
+        <div class="sys-btns">
+          <button data-power="lock" class="sys-action">🔒 Блокировка</button>
+          <button id="sysRefresh" class="sys-action">↻ Обновить</button>
+        </div>
+      </div>
+      <p class="sys-note" id="sysNote"></p>
+    </aside>
+
+    <button class="widget-restore" id="widgetRestore" title="Развернуть Nova" hidden>
+      <span class="orb-core"></span>
+    </button>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

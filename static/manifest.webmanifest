@@ -1,0 +1,19 @@
+{
+  "name": "Nova — персональный ИИ-ассистент",
+  "short_name": "Nova",
+  "description": "Персональный ИИ-ассистент с локальным ИИ, инструментами и управлением ПК.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#05060c",
+  "theme_color": "#05060c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
