@@ -316,9 +316,19 @@
   async function loadStatus() {
     try {
       const d = await api("/api/health");
-      if (d.provider === "demo") { statusEl.classList.add("demo"); statusLabel.textContent = "демо-режим"; }
-      else { statusEl.classList.add("online"); statusLabel.textContent = (d.provider_label || d.provider) + " · " + d.model; }
-    } catch { statusLabel.textContent = "оффлайн"; }
+      statusEl.classList.remove("demo", "online");
+      if (d.provider === "demo") {
+        statusEl.classList.add("demo");
+        statusLabel.textContent = "демо-режим · загрузка ИИ…";
+        setTimeout(loadStatus, 4000); // ждём, пока скачается локальная модель
+      } else {
+        statusEl.classList.add("online");
+        statusLabel.textContent = (d.provider_label || d.provider) + " · " + d.model;
+      }
+    } catch {
+      statusLabel.textContent = "оффлайн";
+      setTimeout(loadStatus, 4000);
+    }
   }
 
   initSpeech();
