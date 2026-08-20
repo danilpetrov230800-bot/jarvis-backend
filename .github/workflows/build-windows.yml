@@ -13,6 +13,9 @@ on:
       - ".github/workflows/build-windows.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -71,3 +74,12 @@ jobs:
             dist/Nova.exe
             Output/NovaSetup.exe
           if-no-files-found: error
+
+      - name: Publish Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/Nova.exe
+            Output/NovaSetup.exe
+          generate_release_notes: true
