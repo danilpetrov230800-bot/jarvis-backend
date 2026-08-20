@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+node_modules/
+.env
+*.db
+.pytest_cache/
+dist/
+release/win-unpacked/
+release/*.exe

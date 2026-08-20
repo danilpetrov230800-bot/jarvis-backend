@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.db
+.env
+node_modules/
+frontend/dist/
+release/win-unpacked/
+release/*.exe
+*.log
+.pytest_cache/
+.mypy_cache/
+.DS_Store

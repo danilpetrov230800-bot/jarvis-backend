@@ -1,0 +1,80 @@
+{
+  "name": "nova",
+  "version": "1.0.0",
+  "description": "NOVA - Neural Operational & Virtual Assistant",
+  "main": "electron/main.js",
+  "author": "NOVA Team",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:vite\" \"wait-on http://127.0.0.1:47821 && wait-on http://127.0.0.1:5173 && electron .\"",
+    "dev:vite": "vite",
+    "dev:backend": "cd ../backend && python -m nova.main",
+    "build": "vite build && electron-builder --win --x64",
+    "build:vite": "vite build",
+    "build:electron": "electron-builder --win --x64",
+    "build:dir": "vite build && electron-builder --win --x64 --dir",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "lucide-react": "^0.460.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "concurrently": "^9.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.5",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.nova.assistant",
+    "productName": "NOVA",
+    "directories": {
+      "output": "../release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": ["**/*", "!**/__pycache__/**", "!**/.pytest_cache/**"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NOVA",
+      "artifactName": "NOVA-Setup.${ext}",
+      "uninstallDisplayName": "NOVA",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "NOVA-Portable.${ext}"
+    }
+  }
+}
