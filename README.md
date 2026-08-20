@@ -4,7 +4,7 @@
 
 ## Как начать
 
-1. Скачайте **NOVA-Setup.exe** из раздела [Releases](https://github.com/danilpetrov230800-bot/jarvis-backend/releases) или из артефакта GitHub Actions **NOVA-Windows**.
+1. Скачайте **NOVA-Setup.exe** из папки [`release/`](release/NOVA-Setup.exe) или из артефакта GitHub Actions **NOVA-Windows**.
 2. Запустите установщик.
 3. Нажмите **Install**. При необходимости выберите папку.
 4. Запустите **NOVA** с рабочего стола или из меню Пуск.

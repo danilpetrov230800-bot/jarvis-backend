@@ -47,10 +47,18 @@ See `requirements.txt`. Bundled into the installer by PyInstaller. End user does
 
 Local (Linux, 2026-08-20):
 
-- `python -m pytest -q` → **36 passed**
+- `python -m pytest -q` → **37 passed**
 - Live server smoke: `/health` ok, chat «привет» ok, calculator 12*12 = 144, diagnostics **PASS** (18 checks), UI 200
-- Windows `NOVA-Setup.exe` is built by GitHub Actions `windows-release` (PyInstaller onedir + Inno Setup), then silently installed, launched, and uninstalled on `windows-latest`
 
-## Remaining environment limits
+Windows CI (`windows-release` run 32415658394 on `windows-latest`):
 
-This Cloud Agent is Linux. The production installer binary is produced on GitHub-hosted Windows runners. After CI succeeds, download `NOVA-Setup.exe` from the workflow artifact `NOVA-Windows`.
+- pytest job: success
+- PyInstaller `NOVA.exe`: success
+- Packaged app `/health` + chat: success
+- Inno Setup `NOVA-Setup.exe`: success
+- Silent install, launch, uninstall: success
+- Artifacts in `release/`: `NOVA-Setup.exe` (33 MB), `NOVA-Portable.zip` (44 MB), `SHA256.txt`
+
+## External check
+
+`Workers Builds: jarvis-backend` is a Cloudflare Workers hook from the old hosted API. It is not required for the Windows desktop app.

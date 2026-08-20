@@ -28,10 +28,5 @@ data/*.png
 .DS_Store
 Thumbs.db
 node_modules/
-release/*.exe
-release/*.zip
-release/*.msi
 packaging/_staging/
-installer/wheels/*.whl
-!installer/wheels/.gitkeep
 .nova-tmp/
