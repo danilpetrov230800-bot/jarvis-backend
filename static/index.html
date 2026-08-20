@@ -48,6 +48,22 @@
     </section>
   </main>
 
+  <div id="setup" class="setup hidden" hidden>
+    <div class="setup-card">
+      <h2>Первый запуск</h2>
+      <p>Вставьте ключ — и JARVIS заработает. Бесплатный ключ: <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">console.groq.com/keys</a></p>
+      <label>Ваше имя
+        <input id="setupName" value="Данила" />
+      </label>
+      <label>API-ключ
+        <input id="setupKey" type="password" placeholder="gsk_... или sk-or-..." autocomplete="off" />
+      </label>
+      <p class="hint">Groq: ключ начинается с gsk_. OpenRouter: sk-or-. OpenAI: sk-.</p>
+      <button id="setupSave" type="button">Сохранить и начать</button>
+      <p id="setupError" class="error" hidden></p>
+    </div>
+  </div>
+
   <dialog id="settings">
     <form id="settingsForm" method="dialog">
       <h2>Конфигурация</h2>

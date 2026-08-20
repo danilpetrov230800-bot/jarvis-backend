@@ -216,19 +216,63 @@ async function loadSettingsIntoForm() {
   }
 }
 
+function inferProvider(key) {
+  if (key.startsWith("gsk_")) return "groq";
+  if (key.startsWith("sk-or-")) return "openrouter";
+  if (key.startsWith("sk-")) return "openai";
+  return "auto";
+}
+
+function isReady(info) {
+  return Boolean(info.has_api_key || info.resolved_provider === "ollama");
+}
+
+function showSetup(visible) {
+  const el = document.getElementById("setup");
+  el.hidden = !visible;
+  el.classList.toggle("hidden", !visible);
+}
+
+document.getElementById("setupSave").addEventListener("click", async () => {
+  const key = document.getElementById("setupKey").value.trim();
+  const name = document.getElementById("setupName").value.trim() || "Данила";
+  const err = document.getElementById("setupError");
+  if (!key) {
+    err.hidden = false;
+    err.textContent = "Вставьте ключ — без него модель не ответит.";
+    return;
+  }
+  const res = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: key, user_name: name, provider: inferProvider(key) }),
+  });
+  if (!res.ok) {
+    err.hidden = false;
+    err.textContent = "Не удалось сохранить ключ.";
+    return;
+  }
+  settings = await (await fetch("/api/settings")).json();
+  showSetup(false);
+  addMessage("assistant", `Системы в норме. Я ${settings.assistant_name}, ${name}. Можно говорить или писать.`);
+  setState("idle", "онлайн");
+});
+
 async function boot() {
   setupMic();
   try {
     settings = await (await fetch("/api/settings")).json();
     document.getElementById("assistantName").textContent = settings.assistant_name || "JARVIS";
-    const ready = settings.has_api_key || settings.resolved_provider === "ollama";
+    if (!isReady(settings)) {
+      showSetup(true);
+      setState("idle", "нужен API-ключ");
+      return;
+    }
     addMessage(
       "assistant",
-      ready
-        ? `Системы в норме. Я ${settings.assistant_name}, сэр. Можно говорить или писать — при необходимости я сам полезу в сеть.`
-        : "Сэр, для интеллекта нужен API-ключ. Откройте настройки и вставьте ключ OpenRouter, Groq или OpenAI. Поиск в сети уже работает без ключа поиска.",
+      `Системы в норме. Я ${settings.assistant_name}, сэр. Можно говорить или писать — при необходимости я сам полезу в сеть.`,
     );
-    setState("idle", ready ? "онлайн" : "нужен API-ключ");
+    setState("idle", "онлайн");
   } catch {
     addMessage("assistant", "Не удалось связаться с локальным ядром JARVIS.");
   }

@@ -1,15 +1,5 @@
-from pathlib import Path
-
-import pytest
-from fastapi.testclient import TestClient
-
-from jarvis.app import app
-
-
-@pytest.fixture()
-def client(tmp_path, monkeypatch):
-    monkeypatch.chdir(Path(__file__).resolve().parents[1])
-    return TestClient(app)
+from jarvis.config import Settings
+from jarvis.llm import LLMError
 
 
 def test_health(client):
@@ -30,8 +20,6 @@ def test_status_and_home(client):
 
 def test_legacy_chat_without_key(client, monkeypatch):
     from jarvis import app as appmod
-    from jarvis.config import Settings
-    from jarvis.llm import LLMError
 
     monkeypatch.setattr(appmod, "load_settings", lambda: Settings(api_key="", provider="openai"))
 

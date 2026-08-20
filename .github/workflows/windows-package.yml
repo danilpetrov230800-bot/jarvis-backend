@@ -1,0 +1,35 @@
+name: windows-package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install and test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pytest -q
+
+  windows-zip:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build portable ZIP with Python inside
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File installer\build-portable.ps1
+      - name: Upload JARVIS-windows.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-windows
+          path: dist/JARVIS-windows.zip
+          if-no-files-found: error
