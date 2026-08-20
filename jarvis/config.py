@@ -7,9 +7,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from nova_core.security import SecretStore
+from nova_core.storage import APP_DIR, SETTINGS_PATH
+
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data"
-SETTINGS_PATH = DATA_DIR / "settings.json"
+DATA_DIR = APP_DIR
 
 
 class Settings(BaseModel):
@@ -51,6 +53,7 @@ def _first_env(*names: str) -> str:
 def load_settings() -> Settings:
     file_data = {k: v for k, v in _read_json(SETTINGS_PATH).items() if v not in ("", None)}
     settings = Settings.model_validate(file_data)
+    settings.api_key = SecretStore().get("api_key")
 
     settings.user_name = os.getenv("NOVA_USER_NAME", os.getenv("JARVIS_USER_NAME", settings.user_name))
     settings.assistant_name = os.getenv("NOVA_ASSISTANT_NAME", os.getenv("JARVIS_ASSISTANT_NAME", settings.assistant_name))
@@ -75,7 +78,8 @@ def load_settings() -> Settings:
 
 def save_settings(settings: Settings) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    payload = settings.model_dump(exclude={"extra"})
+    SecretStore().set("api_key", settings.api_key)
+    payload = settings.model_dump(exclude={"extra", "api_key"})
     SETTINGS_PATH.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",

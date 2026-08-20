@@ -53,6 +53,8 @@ def test_package_contains_runtime_files_not_tests(tmp_path):
     assert "installer/bootstrap.ps1" in names
     assert "static/index.html" in names
     assert "jarvis/app.py" in names
+    assert "nova_core/storage.py" in names
+    assert "nova_core/security.py" in names
     assert not any(name.startswith("tests/") for name in names)
 
     zpath = tmp_path / "NOVA-windows.zip"

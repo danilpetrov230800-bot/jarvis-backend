@@ -41,3 +41,22 @@ def test_pc_endpoints(client, monkeypatch):
     assert ok.json()["action"] == "volume_up"
     missing = client.post("/api/pc", json={"action": "explode"})
     assert missing.status_code == 400
+
+
+def test_core_management_endpoints(client, monkeypatch, tmp_path):
+    from nova_core.services import NovaServices
+    from nova_core.storage import Database
+
+    monkeypatch.setattr("jarvis.app.core", NovaServices(Database(tmp_path / "nova.sqlite3")))
+    memory = client.post("/api/memories", json={"content": "помнить это", "category": "preference"})
+    assert memory.status_code == 200
+    assert memory.json()["content"] == "помнить это"
+    assert client.get("/api/memories", params={"query": "помнить"}).status_code == 200
+
+    skill = client.post(
+        "/api/skills",
+        json={"name": "Пауза", "trigger": "пауза", "actions": [{"type": "wait", "seconds": 1}]},
+    )
+    assert skill.status_code == 200
+    assert client.get("/api/diagnostics").json()["checks"]
+    assert "DELETE_FILES" in client.get("/api/permissions").json()

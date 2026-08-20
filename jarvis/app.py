@@ -13,6 +13,8 @@ from jarvis.brain import respond
 from jarvis.config import load_settings, merge_settings, public_settings, save_settings
 from jarvis.memory import ConversationMemory
 from jarvis.voice import list_russian_voices, speech_preview, synthesize
+from nova_core.services import NovaServices
+from nova_core.storage import APP_DIR
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
@@ -26,6 +28,7 @@ app.add_middleware(
 )
 
 memory = ConversationMemory()
+core = NovaServices()
 
 
 class ChatIn(BaseModel):
@@ -58,6 +61,30 @@ class PcIn(BaseModel):
     value: int | None = None
 
 
+class MemoryIn(BaseModel):
+    content: str = Field(min_length=1, max_length=8000)
+    category: str = "long_term"
+    importance: int = Field(default=0, ge=0, le=5)
+
+
+class SkillIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    trigger: str = Field(min_length=1, max_length=500)
+    actions: list[dict[str, Any]] = Field(min_length=1, max_length=32)
+    description: str = Field(default="", max_length=1000)
+
+
+class TaskIn(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    kind: str = "one_time"
+    due_at: str | None = None
+    repeat_rule: str | None = None
+
+
+class PermissionIn(BaseModel):
+    allowed: bool
+
+
 @app.get("/api/status")
 def api_status() -> dict[str, Any]:
     settings = load_settings()
@@ -66,6 +93,8 @@ def api_status() -> dict[str, Any]:
         "assistant": settings.assistant_name,
         "user": settings.user_name,
         "ready": True,
+        "offline_mode": not bool(settings.api_key) and settings.provider != "ollama",
+        "storage": str(APP_DIR),
     }
 
 
@@ -98,6 +127,78 @@ async def voices() -> dict[str, Any]:
 @app.post("/api/chat")
 async def api_chat(payload: ChatIn) -> dict[str, Any]:
     return await _chat(payload.text)
+
+
+@app.get("/api/memories")
+def get_memories(query: str = "") -> dict[str, Any]:
+    return {"items": core.memories(query)}
+
+
+@app.post("/api/memories")
+def add_memory(payload: MemoryIn) -> dict[str, Any]:
+    try:
+        return core.add_memory(payload.content, payload.category, payload.importance)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.delete("/api/memories/{memory_id}")
+def delete_memory(memory_id: str) -> dict[str, str]:
+    core.delete_memory(memory_id)
+    return {"status": "deleted"}
+
+
+@app.get("/api/skills")
+def get_skills() -> dict[str, Any]:
+    return {"items": core.skills()}
+
+
+@app.post("/api/skills")
+def add_skill(payload: SkillIn) -> dict[str, Any]:
+    try:
+        return core.create_skill(payload.name, payload.trigger, payload.actions, payload.description)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/tasks")
+def get_tasks() -> dict[str, Any]:
+    return {"items": core.list_tasks()}
+
+
+@app.post("/api/tasks")
+def add_task(payload: TaskIn) -> dict[str, Any]:
+    try:
+        return core.create_task(payload.title, payload.kind, payload.due_at, payload.repeat_rule)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/permissions")
+def get_permissions() -> dict[str, Any]:
+    return core.permissions_status()
+
+
+@app.put("/api/permissions/{permission}")
+def set_permission(permission: str, payload: PermissionIn) -> dict[str, Any]:
+    from nova_core.security import Permission
+
+    try:
+        item = Permission(permission)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Неизвестное разрешение.") from exc
+    core.permissions.set(item, payload.allowed)
+    return core.permissions_status()
+
+
+@app.get("/api/diagnostics")
+def get_diagnostics() -> dict[str, Any]:
+    return {"checks": core.diagnostics()}
+
+
+@app.post("/api/backup")
+def create_backup() -> dict[str, str]:
+    return {"path": str(core.backup())}
 
 
 @app.post("/chat")

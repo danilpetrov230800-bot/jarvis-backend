@@ -12,6 +12,7 @@ $copy = @(
     "NOVA.bat",
     "JARVIS.bat",
     "run.py",
+    "nova_launcher.py",
     "requirements.txt",
     ".env.example",
     "README.md",
@@ -23,7 +24,7 @@ foreach ($name in $copy) {
     $src = Join-Path $Root $name
     if (Test-Path $src) { Copy-Item $src $Stage }
 }
-foreach ($dir in @("jarvis", "static", "installer", "api", "data")) {
+foreach ($dir in @("jarvis", "nova_core", "static", "installer", "api", "data")) {
     $src = Join-Path $Root $dir
     if (Test-Path $src) {
         Copy-Item $src (Join-Path $Stage $dir) -Recurse

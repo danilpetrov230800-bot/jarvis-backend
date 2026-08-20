@@ -19,17 +19,24 @@ jobs:
           python -m pip install -r requirements-dev.txt
           python -m pytest -q
 
-  windows-zip:
+  windows-installer:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build portable ZIP with Python inside
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Inno Setup
         shell: powershell
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File installer\build-portable.ps1
-      - name: Upload NOVA-windows.zip
+          choco install innosetup --no-progress -y
+          "$env:ProgramFiles(x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build self-contained Windows installer
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer\build-windows.ps1
+      - name: Upload release files
         uses: actions/upload-artifact@v4
         with:
-          name: NOVA-windows
-          path: dist/NOVA-windows.zip
+          name: NOVA-release
+          path: release
           if-no-files-found: error
