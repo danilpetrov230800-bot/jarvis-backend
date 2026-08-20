@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JARVIS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">J</span>
+      <div>
+        <strong id="assistantName">JARVIS</strong>
+        <small id="statusLine">система в режиме ожидания</small>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="resetBtn" type="button" title="Новый разговор">Сброс</button>
+      <button id="settingsBtn" type="button">Настройки</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="hud-col">
+      <div id="hud" class="hud idle" aria-hidden="true">
+        <div class="ring r1"></div>
+        <div class="ring r2"></div>
+        <div class="ring r3"></div>
+        <div class="core">
+          <span id="hudState">IDLE</span>
+        </div>
+      </div>
+      <p id="heard" class="heard"></p>
+    </section>
+
+    <section class="chat-col">
+      <div id="log" class="log"></div>
+      <form id="composer" class="composer">
+        <button id="micBtn" type="button" aria-label="Голос">●</button>
+        <input id="input" type="text" autocomplete="off" placeholder="Скажите «Джарвис» или напишите сообщение…" />
+        <button id="sendBtn" type="submit">Отправить</button>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="settings">
+    <form id="settingsForm" method="dialog">
+      <h2>Конфигурация</h2>
+      <p class="hint">Ключ хранится только на этом компьютере в <code>data/settings.json</code>.</p>
+      <label>Провайдер
+        <select name="provider">
+          <option value="auto">Авто</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="openai">OpenAI</option>
+          <option value="groq">Groq</option>
+          <option value="ollama">Ollama (локально)</option>
+        </select>
+      </label>
+      <label>Модель
+        <input name="model" placeholder="например x-ai/grok-4-fast" />
+      </label>
+      <label>Base URL
+        <input name="base_url" placeholder="оставьте пустым для авто" />
+      </label>
+      <label>API-ключ
+        <input name="api_key" type="password" placeholder="не меняется, если пусто" />
+      </label>
+      <label>Ваше имя
+        <input name="user_name" />
+      </label>
+      <label>Голос
+        <select name="tts_voice"></select>
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="closeSettings">Закрыть</button>
+        <button value="save" id="saveSettings">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
